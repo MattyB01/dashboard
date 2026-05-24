@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -66,20 +67,51 @@ export default function Dashboard() {
             </svg>
             <span className="text-lg sm:text-xl font-semibold tracking-tight">Hermes Dashboard</span>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Desktop nav */}
+          <div className="hidden sm:flex items-center gap-4">
             <a
               href="/cars"
-              className="text-[11px] sm:text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
             >
               Cars
             </a>
             {stats && (
-              <span className="text-[11px] sm:text-xs text-[#555570] font-mono whitespace-nowrap">
+              <span className="text-[11px] text-[#555570] font-mono whitespace-nowrap">
                 Updated {new Date(stats.timestamp).toLocaleTimeString()}
               </span>
             )}
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="sm:hidden flex flex-col gap-1 p-2"
+            aria-label="Toggle menu"
+          >
+            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
+            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
+          </button>
         </div>
+
+        {/* Mobile nav dropdown */}
+        {menuOpen && (
+          <div className="sm:hidden mt-4 pt-4 border-t border-[#1e1e30] space-y-3">
+            <a
+              href="/cars"
+              className="block text-sm text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              onClick={() => setMenuOpen(false)}
+            >
+              Cars
+            </a>
+            {stats && (
+              <div className="text-[11px] text-[#555570] font-mono">
+                Updated {new Date(stats.timestamp).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
@@ -113,7 +145,6 @@ export default function Dashboard() {
 
         {/* Detail Sections */}
         <div className="grid md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 mb-8 sm:mb-10">
-          {/* CPU Card */}
           <SectionCard title="◆ Processor">
             <Row label="Model" value={stats?.cpu.model ?? '—'} />
             <Row label="Usage" value={stats ? `${stats.cpu.usagePercent}%` : '—'} />
@@ -124,7 +155,6 @@ export default function Dashboard() {
             <Row label="Load (15m)" value={stats ? stats.cpu.loadAverage[2].toFixed(2) : '—'} />
           </SectionCard>
 
-          {/* Memory Card */}
           <SectionCard title="◈ Memory">
             <Row label="Usage" value={stats ? `${stats.memory.usagePercent}%` : '—'} />
             {stats && <div className="pt-1 pb-3"><ProgressBar percent={stats.memory.usagePercent} /></div>}
@@ -133,7 +163,6 @@ export default function Dashboard() {
             <Row label="Free" value={stats ? `${stats.memory.freeGb} GB` : '—'} />
           </SectionCard>
 
-          {/* System Card */}
           <SectionCard title="⊘ System">
             <Row label="Hostname" value={stats?.hostname ?? '—'} />
             <Row label="OS" value={stats ? `${stats.platform} ${stats.arch}` : '—'} />
@@ -142,7 +171,6 @@ export default function Dashboard() {
             <Row label="Uptime" value={stats?.uptime ?? '—'} />
           </SectionCard>
 
-          {/* About Card */}
           <SectionCard title="◉ About">
             <div className="text-sm sm:text-base text-[#8888a0] leading-relaxed space-y-3">
               <p>

@@ -32,6 +32,7 @@ export default function CarsPage() {
   const [makeFilter, setMakeFilter] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCar, setSelectedCar] = useState<CarListing | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchCars();
@@ -91,13 +92,45 @@ export default function CarsPage() {
                 Private seller cars under $4,000 in Adelaide
               </p>
             </div>
-            <a
-              href="/"
-              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+
+            {/* Desktop nav */}
+            <div className="hidden sm:flex items-center gap-4">
+              <a
+                href="/"
+                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Dashboard
+              </a>
+              {loading ? null : (
+                <span className="text-xs text-zinc-600">{cars.length} cars</span>
+              )}
+            </div>
+
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="sm:hidden flex flex-col gap-1 p-2"
+              aria-label="Toggle menu"
             >
-              Back to Dashboard
-            </a>
+              <span className={`block w-5 h-[1.5px] bg-zinc-500 transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
+              <span className={`block w-5 h-[1.5px] bg-zinc-500 transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
+              <span className={`block w-5 h-[1.5px] bg-zinc-500 transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
+            </button>
           </div>
+
+          {/* Mobile nav dropdown */}
+          {menuOpen && (
+            <div className="sm:hidden mt-4 pt-4 border-t border-zinc-800 space-y-3">
+              <a
+                href="/"
+                className="block text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                onClick={() => setMenuOpen(false)}
+              >
+                Dashboard
+              </a>
+              <div className="text-xs text-zinc-600">{loading ? "Loading..." : `${cars.length} cars found`}</div>
+            </div>
+          )}
 
           {/* Search + Filters */}
           <div className="mt-4 flex flex-wrap gap-3 items-end">
