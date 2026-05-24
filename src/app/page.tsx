@@ -8,43 +8,14 @@ interface Verse {
   version: string;
 }
 
-interface SystemStats {
-  hostname: string;
-  platform: string;
-  release: string;
-  arch: string;
-  nodeVersion: string;
-  uptime: string;
-  cpu: {
-    model: string;
-    cores: number;
-    usagePercent: number;
-    loadAverage: number[];
-  };
-  memory: {
-    totalGb: number;
-    usedGb: number;
-    freeGb: number;
-    usagePercent: number;
-  };
-  timestamp: string;
-}
-
 export default function Dashboard() {
-  const [stats, setStats] = useState<SystemStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [verse, setVerse] = useState<Verse | null>(null);
-  const [verseLoading, setVerseLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    fetchStats();
     fetchVerse();
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   async function fetchVerse() {
@@ -55,21 +26,7 @@ export default function Dashboard() {
         setVerse(data);
       }
     } catch {
-      // silent — verse is a bonus feature
-    } finally {
-      setVerseLoading(false);
-    }
-  }
-
-  async function fetchStats() {
-    try {
-      const res = await fetch('/api/system');
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      setStats(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      // silent
     } finally {
       setLoading(false);
     }
@@ -78,7 +35,7 @@ export default function Dashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-dvh bg-[#0a0a0f] text-[#e8e8f0]">
+    <div className="min-h-dvh bg-[#0a0a0f] text-[#e8e8f0] flex flex-col">
       {/* Header */}
       <header className="border-b border-[#1e1e30] px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -93,193 +50,56 @@ export default function Dashboard() {
 
           {/* Desktop nav */}
           <div className="hidden sm:flex items-center gap-4">
-            {stats && (
-              <span className="text-[11px] text-[#555570] font-mono whitespace-nowrap">
-                Updated {new Date(stats.timestamp).toLocaleTimeString()}
-              </span>
-            )}
+            <a
+              href="/system"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              System
+            </a>
           </div>
 
           {/* Mobile hamburger */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="sm:hidden flex flex-col gap-1 p-2"
-            aria-label="Toggle menu"
-          >
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
-          </button>
-        </div>
-
-        {/* Mobile nav dropdown */}
-        {menuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-[#1e1e30] space-y-3">
-            {stats && (
-              <div className="text-[11px] text-[#555570] font-mono">
-                Updated {new Date(stats.timestamp).toLocaleTimeString()}
-              </div>
-            )}
+          <div className="sm:hidden flex items-center gap-4">
+            <a
+              href="/system"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              System
+            </a>
           </div>
-        )}
+        </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        {/* Stat Cards — responsive grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-8 sm:mb-10 lg:mb-12">
-          <StatCard
-            label="CPU Usage"
-            value={stats ? `${stats.cpu.usagePercent}%` : '—'}
-            sub={stats ? `${stats.cpu.cores} cores` : undefined}
-            loading={loading}
-          />
-          <StatCard
-            label="Memory"
-            value={stats ? `${stats.memory.usagePercent}%` : '—'}
-            sub={stats ? `${stats.memory.freeGb} GB free` : undefined}
-            loading={loading}
-          />
-          <StatCard
-            label="Uptime"
-            value={stats ? stats.uptime : '—'}
-            sub={stats?.hostname}
-            loading={loading}
-          />
-          <StatCard
-            label="Platform"
-            value={stats ? `${stats.platform} ${stats.arch}` : '—'}
-            sub={stats?.release}
-            loading={loading}
-          />
-        </div>
-
-        {/* Detail Sections */}
-        <div className="grid md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 mb-8 sm:mb-10">
-          <SectionCard title="◆ Processor">
-            <Row label="Model" value={stats?.cpu.model ?? '—'} />
-            <Row label="Usage" value={stats ? `${stats.cpu.usagePercent}%` : '—'} />
-            {stats && <div className="pt-1 pb-3"><ProgressBar percent={stats.cpu.usagePercent} /></div>}
-            <Row label="Cores" value={stats?.cpu.cores?.toString() ?? '—'} />
-            <Row label="Load (1m)" value={stats ? stats.cpu.loadAverage[0].toFixed(2) : '—'} />
-            <Row label="Load (5m)" value={stats ? stats.cpu.loadAverage[1].toFixed(2) : '—'} />
-            <Row label="Load (15m)" value={stats ? stats.cpu.loadAverage[2].toFixed(2) : '—'} />
-          </SectionCard>
-
-          <SectionCard title="◈ Memory">
-            <Row label="Usage" value={stats ? `${stats.memory.usagePercent}%` : '—'} />
-            {stats && <div className="pt-1 pb-3"><ProgressBar percent={stats.memory.usagePercent} /></div>}
-            <Row label="Total" value={stats ? `${stats.memory.totalGb} GB` : '—'} />
-            <Row label="Used" value={stats ? `${stats.memory.usedGb} GB` : '—'} />
-            <Row label="Free" value={stats ? `${stats.memory.freeGb} GB` : '—'} />
-          </SectionCard>
-
-          <SectionCard title="⊘ System">
-            <Row label="Hostname" value={stats?.hostname ?? '—'} />
-            <Row label="OS" value={stats ? `${stats.platform} ${stats.arch}` : '—'} />
-            <Row label="Kernel" value={stats?.release ?? '—'} />
-            <Row label="Node.js" value={stats?.nodeVersion ?? '—'} />
-            <Row label="Uptime" value={stats?.uptime ?? '—'} />
-          </SectionCard>
-
-          <SectionCard title="◉ About">
-            <div className="text-sm sm:text-base text-[#8888a0] leading-relaxed space-y-3">
-              <p>
-                This dashboard displays real-time system statistics for the Hermes
-                server environment. Stats refresh automatically every 30 seconds.
-              </p>
-              <p className="text-[11px] sm:text-xs text-[#555570] font-mono">
-                Built with Next.js · Deployed via Vercel
-              </p>
+      {/* Verse of the Day — centered */}
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+        <div className="w-full max-w-2xl mx-auto text-center">
+          <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-8 sm:p-10 lg:p-12">
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-[#a78bfa] font-mono mb-6 sm:mb-8">
+              ✦ Verse of the Day
             </div>
-          </SectionCard>
-        </div>
 
-        {/* Bible verse of the day */}
-        <div className="max-w-2xl mx-auto text-center">
-          <SectionCard title="✦ Verse of the Day">
-            {verseLoading ? (
-              <div className="text-[#555570] text-sm animate-pulse">Loading...</div>
+            {loading ? (
+              <div className="text-[#555570] text-base animate-pulse">Loading...</div>
             ) : verse ? (
               <>
-                <p className="text-base sm:text-lg text-[#e8e8f0] leading-relaxed italic">
+                <p className="text-lg sm:text-xl lg:text-2xl text-[#e8e8f0] leading-relaxed italic font-light">
                   &ldquo;{verse.verse}&rdquo;
                 </p>
-                <p className="mt-4 text-sm text-[#a78bfa] font-mono">
-                  {verse.reference} — {verse.version}
-                </p>
+                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-[#1e1e30]">
+                  <p className="text-sm sm:text-base text-[#a78bfa] font-mono">
+                    {verse.reference}
+                  </p>
+                  <p className="text-[11px] text-[#555570] font-mono mt-1">
+                    {verse.version}
+                  </p>
+                </div>
               </>
             ) : (
               <p className="text-sm text-[#555570]">Verse unavailable</p>
             )}
-          </SectionCard>
+          </div>
         </div>
       </main>
-
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-[#f87171] text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] sm:max-w-sm">
-          ⚠️ {error}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, loading }: {
-  label: string;
-  value: string;
-  sub?: string;
-  loading: boolean;
-}) {
-  return (
-    <div className="relative bg-[#16161f] border border-[#1e1e30] rounded-2xl p-4 sm:p-5 lg:p-6 overflow-hidden hover:border-[#2a2a40] transition-colors">
-      <div className="absolute top-0 left-0 w-[3px] h-full bg-[#a78bfa] opacity-60" />
-      <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-[#555570] font-mono mb-2 sm:mb-3">
-        {label}
-      </div>
-      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight ${loading ? 'animate-pulse text-[#555570]' : ''}`}>
-        {loading ? '...' : value}
-      </div>
-      {sub && (
-        <div className="text-xs sm:text-sm text-[#8888a0] mt-1.5 sm:mt-2 font-mono truncate">
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-5 sm:p-6 lg:p-7">
-      <h3 className="text-[11px] sm:text-xs uppercase tracking-widest text-[#a78bfa] font-mono mb-5 sm:mb-6">
-        {title}
-      </h3>
-      <div className="space-y-0">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between py-2.5 sm:py-3 border-b border-[#1e1e30] last:border-0">
-      <span className="text-sm sm:text-base text-[#8888a0]">{label}</span>
-      <span className="text-sm sm:text-base font-mono text-[#e8e8f0] text-right ml-4 max-w-[55%] truncate">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ProgressBar({ percent }: { percent: number }) {
-  const color = percent > 80 ? '#f87171' : percent > 60 ? '#fbbf24' : '#a78bfa';
-  return (
-    <div className="w-full h-2.5 sm:h-3 bg-[#1a1a26] rounded-full overflow-hidden">
-      <div
-        className="h-full rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: color }}
-      />
     </div>
   );
 }
