@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
+interface Verse {
+  verse: string;
+  reference: string;
+  version: string;
+}
+
 interface SystemStats {
   hostname: string;
   platform: string;
@@ -30,13 +36,30 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [verse, setVerse] = useState<Verse | null>(null);
+  const [verseLoading, setVerseLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
     fetchStats();
+    fetchVerse();
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  async function fetchVerse() {
+    try {
+      const res = await fetch('/api/bible');
+      if (res.ok) {
+        const data = await res.json();
+        setVerse(data);
+      }
+    } catch {
+      // silent — verse is a bonus feature
+    } finally {
+      setVerseLoading(false);
+    }
+  }
 
   async function fetchStats() {
     try {
@@ -70,12 +93,6 @@ export default function Dashboard() {
 
           {/* Desktop nav */}
           <div className="hidden sm:flex items-center gap-4">
-            <a
-              href="/cars"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
-            >
-              Cars
-            </a>
             {stats && (
               <span className="text-[11px] text-[#555570] font-mono whitespace-nowrap">
                 Updated {new Date(stats.timestamp).toLocaleTimeString()}
@@ -98,13 +115,6 @@ export default function Dashboard() {
         {/* Mobile nav dropdown */}
         {menuOpen && (
           <div className="sm:hidden mt-4 pt-4 border-t border-[#1e1e30] space-y-3">
-            <a
-              href="/cars"
-              className="block text-sm text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
-              onClick={() => setMenuOpen(false)}
-            >
-              Cars
-            </a>
             {stats && (
               <div className="text-[11px] text-[#555570] font-mono">
                 Updated {new Date(stats.timestamp).toLocaleTimeString()}
@@ -181,6 +191,26 @@ export default function Dashboard() {
                 Built with Next.js · Deployed via Vercel
               </p>
             </div>
+          </SectionCard>
+        </div>
+
+        {/* Bible verse of the day */}
+        <div className="max-w-2xl mx-auto text-center">
+          <SectionCard title="✦ Verse of the Day">
+            {verseLoading ? (
+              <div className="text-[#555570] text-sm animate-pulse">Loading...</div>
+            ) : verse ? (
+              <>
+                <p className="text-base sm:text-lg text-[#e8e8f0] leading-relaxed italic">
+                  &ldquo;{verse.verse}&rdquo;
+                </p>
+                <p className="mt-4 text-sm text-[#a78bfa] font-mono">
+                  {verse.reference} — {verse.version}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-[#555570]">Verse unavailable</p>
+            )}
           </SectionCard>
         </div>
       </main>
