@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [checking, setChecking] = useState(true);
   const router = useRouter();
 
-  // Check if already authenticated
   useEffect(() => {
     fetch('/api/auth/check')
       .then(r => r.json())
@@ -47,28 +46,28 @@ export default function LoginPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="min-h-dvh bg-[#0a0a0f] flex items-center justify-center">
         <div className="text-[#555570] text-sm font-mono animate-pulse">Checking...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-[#0a0a0f] flex items-center justify-center px-5 py-8">
       <div className="w-full max-w-sm">
         {/* Logo / Header */}
-        <div className="text-center mb-10">
-          <svg viewBox="0 0 40 40" width="40" height="40" className="mx-auto mb-4">
+        <div className="text-center mb-10 sm:mb-12">
+          <svg viewBox="0 0 40 40" width="48" height="48" className="mx-auto mb-5">
             <circle cx="20" cy="20" r="18" fill="none" stroke="#a78bfa" strokeWidth="2.5" />
             <path d="M12 28 L20 10 L28 28" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M15 22 L25 22" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <h1 className="text-xl font-semibold text-[#e8e8f0]">Hermes Dashboard</h1>
-          <p className="text-sm text-[#555570] mt-1 font-mono">Enter password to continue</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#e8e8f0] tracking-tight">Hermes Dashboard</h1>
+          <p className="text-sm sm:text-base text-[#555570] mt-2 font-mono">Enter password to continue</p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <input
               type="password"
@@ -77,12 +76,12 @@ export default function LoginPage() {
               placeholder="Password"
               disabled={loading}
               autoFocus
-              className="w-full px-4 py-3 bg-[#16161f] border border-[#1e1e30] rounded-lg text-[#e8e8f0] placeholder:text-[#555570] font-mono text-sm focus:outline-none focus:border-[#a78bfa] focus:ring-1 focus:ring-[#a78bfa]/30 transition-all disabled:opacity-50"
+              className="w-full px-5 py-4 bg-[#16161f] border border-[#1e1e30] rounded-xl text-[#e8e8f0] placeholder:text-[#555570] font-mono text-base sm:text-sm focus:outline-none focus:border-[#a78bfa] focus:ring-2 focus:ring-[#a78bfa]/20 transition-all disabled:opacity-50"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-[#f87171] font-mono text-center bg-[#f87171]/10 border border-[#f87171]/20 rounded-lg px-4 py-2.5">
+            <div className="text-sm text-[#f87171] font-mono text-center bg-[#f87171]/10 border border-[#f87171]/20 rounded-xl px-5 py-3">
               ✦ {error}
             </div>
           )}
@@ -90,13 +89,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full py-3 bg-[#a78bfa] text-[#0a0a0f] font-semibold rounded-lg hover:bg-[#b99cfb] transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-[#a78bfa] text-[#0a0a0f] font-semibold rounded-xl hover:bg-[#b99cfb] transition-colors text-base disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-[10px] text-center text-[#33334a] mt-8 font-mono">
+        <p className="text-[11px] text-center text-[#33334a] mt-10 font-mono tracking-wider uppercase">
           Authorized access only
         </p>
       </div>
