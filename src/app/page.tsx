@@ -66,11 +66,19 @@ export default function Dashboard() {
             </svg>
             <span className="text-lg sm:text-xl font-semibold tracking-tight">Hermes Dashboard</span>
           </div>
-          {stats && (
-            <span className="text-[11px] sm:text-xs text-[#555570] font-mono whitespace-nowrap">
-              Updated {new Date(stats.timestamp).toLocaleTimeString()}
-            </span>
-          )}
+          <div className="flex items-center gap-4">
+            <a
+              href="/cars"
+              className="text-[11px] sm:text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              Cars
+            </a>
+            {stats && (
+              <span className="text-[11px] sm:text-xs text-[#555570] font-mono whitespace-nowrap">
+                Updated {new Date(stats.timestamp).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
