@@ -6,6 +6,7 @@ const publicPaths = [
   '/login',
   '/api/auth/login',
   '/api/auth/check',
+  '/api/proxy',
 ];
 
 export async function middleware(request: NextRequest) {
