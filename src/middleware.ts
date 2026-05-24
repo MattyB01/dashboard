@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { hasValidSession } from '@/lib/auth';
+import { hasValidSession } from '@/lib/auth-edge';
 
 const publicPaths = [
   '/login',
   '/api/auth/login',
   '/api/auth/check',
-  '/_next/static',
-  '/favicon.ico',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -35,13 +33,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - But we handle those in the middleware itself anyway
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
