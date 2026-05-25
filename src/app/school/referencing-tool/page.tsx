@@ -232,6 +232,7 @@ export default function ReferencingTool() {
   const [selectedBulk, setSelectedBulk] = useState<Set<number>>(new Set());
   const [showListDropdown, setShowListDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -274,24 +275,32 @@ export default function ReferencingTool() {
 
   // ── List management ──
   function saveCurrentList() {
-    let lists = [...savedLists];
-    if (currentListId) {
-      lists = lists.map((l) =>
-        l.id === currentListId
-          ? { ...l, title: currentTitle, references, updatedAt: new Date().toISOString() }
-          : l
-      );
-    } else {
-      lists.push({
-        id: uid(),
-        title: currentTitle,
-        references,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      setCurrentListId(lists[lists.length - 1].id);
+    try {
+      let lists = [...savedLists];
+      if (currentListId) {
+        lists = lists.map((l) =>
+          l.id === currentListId
+            ? { ...l, title: currentTitle, references, updatedAt: new Date().toISOString() }
+            : l
+        );
+      } else {
+        const newId = uid();
+        lists.push({
+          id: newId,
+          title: currentTitle,
+          references,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        setCurrentListId(newId);
+      }
+      persistLists(lists);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      console.error("Save failed", e);
+      alert("Failed to save list. Check console for details.");
     }
-    persistLists(lists);
   }
 
   function loadList(list: SavedList) {
@@ -564,13 +573,13 @@ export default function ReferencingTool() {
               value={currentTitle}
               onChange={(e) => setCurrentTitle(e.target.value)}
               placeholder="Reference list title..."
-              className="flex-1 min-w-[200px] bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
+              className="flex-1 min-w-[140px] sm:min-w-[200px] bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
             />
             <button
               onClick={saveCurrentList}
-              className="bg-accent-light hover:bg-accent/20 border border-accent/20 text-accent px-4 py-2.5 rounded-lg text-sm transition-colors font-medium"
+              className="bg-accent-light hover:bg-accent/20 border border-accent/20 text-accent px-4 py-2.5 rounded-lg text-sm transition-colors font-medium shrink-0"
             >
-              💾 Save
+              {saved ? "✓ Saved!" : "💾 Save"}
             </button>
             <div className="relative" ref={dropdownRef}>
               <button
@@ -580,7 +589,7 @@ export default function ReferencingTool() {
                 📂 Load ▾
               </button>
               {showListDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-xl p-2 w-64 shadow-xl z-10">
+                <div className="absolute right-0 sm:right-0 left-0 sm:left-auto top-full mt-2 bg-card border border-line rounded-xl p-2 w-64 shadow-xl z-10 max-w-[calc(100vw-2rem)]">
                   {savedLists.length === 0 ? (
                     <p className="text-sm text-muted p-3">No saved lists yet</p>
                   ) : (
