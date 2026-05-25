@@ -79,6 +79,20 @@ export default function SchoolPage() {
               Generate SACE Stage 2 Maths Methods practice tests with worked solutions. Pick your topics.
             </p>
           </a>
+          <a
+            href="/school/referencing-tool"
+            className="group bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 hover:border-[#a78bfa]/50 transition-all hover:bg-[#1a1a28]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#1e1e30] flex items-center justify-center mb-4 group-hover:bg-[#a78bfa]/10 transition-colors">
+              <span className="text-xl text-[#a78bfa]">📚</span>
+            </div>
+            <h2 className="text-lg font-mono text-[#e8e8f0] mb-2 group-hover:text-[#a78bfa] transition-colors">
+              Referencing Tool
+            </h2>
+            <p className="text-sm text-[#8888a0] font-mono leading-relaxed">
+              Build APA 7th edition reference lists. Auto-fill from URLs, bulk import, save lists for later.
+            </p>
+          </a>
         </div>
       </div>
     </main>
