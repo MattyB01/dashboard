@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
 
     if (format === "test-pdf") {
       const pdfs = await generatePDFs(testData);
-      return new NextResponse(pdfs.testPdf, {
+      return new NextResponse(Buffer.from(pdfs.testPdf), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="maths-test.pdf"`,
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
 
     if (format === "solutions-pdf") {
       const pdfs = await generatePDFs(testData);
-      return new NextResponse(pdfs.solPdf, {
+      return new NextResponse(Buffer.from(pdfs.solPdf), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="maths-test-solutions.pdf"`,
