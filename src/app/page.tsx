@@ -49,7 +49,7 @@ export default function Dashboard() {
           </div>
 
           {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 sm:gap-4">
             <a
               href="/school"
               className="text-xs text-secondary hover:text-fg transition-colors"
@@ -65,7 +65,7 @@ export default function Dashboard() {
           </div>
 
           {/* Mobile hamburger */}
-          <div className="sm:hidden flex items-center gap-4">
+          <div className="sm:hidden flex items-center gap-2 sm:gap-4">
             <a
               href="/school"
               className="text-xs text-secondary hover:text-fg transition-colors"
@@ -94,10 +94,10 @@ export default function Dashboard() {
               <div className="text-muted text-base animate-pulse">Loading...</div>
             ) : verse ? (
               <>
-                <p className="text-lg sm:text-xl lg:text-2xl text-fg leading-relaxed italic font-light">
+                <p className="text-lg sm:text-xl lg:text-2xl text-fg leading-relaxed italic font-light break-words">
                   &ldquo;{verse.verse}&rdquo;
                 </p>
-                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-line">
+                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-line break-words">
                   <p className="text-sm sm:text-base text-accent">
                     {verse.reference}
                   </p>

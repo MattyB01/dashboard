@@ -59,7 +59,7 @@ export default function SystemPage() {
       {/* Header */}
       <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <svg viewBox="0 0 40 40" width="28" height="28" className="shrink-0">
               <circle cx="20" cy="20" r="18" fill="none" stroke="#a78bfa" strokeWidth="2.5" />
               <path d="M12 28 L20 10 L28 28" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -98,15 +98,15 @@ export default function SystemPage() {
             className="sm:hidden flex flex-col gap-1 p-2"
             aria-label="Toggle menu"
           >
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-[#8888a0] transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
+            <span className={`block w-5 h-[1.5px] bg-muted transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
+            <span className={`block w-5 h-[1.5px] bg-muted transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`block w-5 h-[1.5px] bg-muted transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
           </button>
         </div>
 
         {/* Mobile nav dropdown */}
         {menuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-3">
+          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-3 break-words">
             <a
               href="/"
               className="block text-sm text-secondary hover:text-fg transition-colors"
@@ -133,7 +133,7 @@ export default function SystemPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         {/* Stat Cards — responsive grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-8 sm:mb-10 lg:mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 sm:gap-4 lg:gap-5 mb-8 sm:mb-10 lg:mb-12">
           <StatCard
             label="CPU Usage"
             value={stats ? `${stats.cpu.usagePercent}%` : '—'}
@@ -189,7 +189,7 @@ export default function SystemPage() {
           </SectionCard>
 
           <SectionCard title="◉ About">
-            <div className="text-sm sm:text-base text-secondary leading-relaxed space-y-3">
+            <div className="text-sm sm:text-base text-secondary leading-relaxed space-y-3 break-words break-words">
               <p>
                 This dashboard displays real-time system statistics for the Hermes
                 server environment. Stats refresh automatically every 30 seconds.
@@ -203,7 +203,7 @@ export default function SystemPage() {
       </main>
 
       {error && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] sm:max-w-sm">
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] break-words sm:max-w-sm">
           ⚠️ {error}
         </div>
       )}
@@ -223,7 +223,7 @@ function StatCard({ label, value, sub, loading }: {
       <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-muted mb-2 sm:mb-3">
         {label}
       </div>
-      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight ${loading ? 'animate-pulse text-muted' : ''}`}>
+      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight break-all ${loading ? 'animate-pulse text-muted' : ''}`}>
         {loading ? '...' : value}
       </div>
       {sub && (

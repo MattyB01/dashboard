@@ -16,7 +16,7 @@ export default function SchoolPage() {
     <main className="min-h-screen bg-surface text-fg flex flex-col">
       {/* Header */}
       <header className="border-b border-line px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">
             Home
           </a>
@@ -64,7 +64,7 @@ export default function SchoolPage() {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           <a
             href="/school/maths-test-generator"
             className="group bg-card border border-line rounded-2xl p-6 hover:border-accent/50 transition-all hover:shadow-md card-shadow"
@@ -75,7 +75,7 @@ export default function SchoolPage() {
             <h2 className="text-lg text-fg mb-2 group-hover:text-accent transition-colors font-semibold tracking-tight">
               Maths Test Generator
             </h2>
-            <p className="text-sm text-secondary leading-relaxed">
+            <p className="text-sm text-secondary leading-relaxed break-words">
               Generate SACE Stage 2 Maths Methods practice tests with worked solutions. Pick your topics.
             </p>
           </a>
@@ -89,7 +89,7 @@ export default function SchoolPage() {
             <h2 className="text-lg text-fg mb-2 group-hover:text-accent transition-colors font-semibold tracking-tight">
               Referencing Tool
             </h2>
-            <p className="text-sm text-secondary leading-relaxed">
+            <p className="text-sm text-secondary leading-relaxed break-words">
               Build APA 7th edition reference lists. Auto-fill from URLs, bulk import, save lists for later.
             </p>
           </a>

@@ -528,7 +528,7 @@ export default function ReferencingTool() {
     <main className="min-h-screen bg-surface text-fg flex flex-col">
       {/* Header */}
       <header className="border-b border-line px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
             ← School
           </a>
@@ -618,7 +618,7 @@ export default function ReferencingTool() {
         </div>
 
         {/* ── Tabs: Single / Bulk ── */}
-        <div className="mb-6 flex gap-1 bg-card border border-line rounded-2xl p-1 w-fit card-shadow">
+        <div className="mb-6 flex gap-1 bg-card border border-line rounded-2xl p-1 w-full sm:w-fit card-shadow">
           <button
             onClick={() => setTab("single")}
             className={`px-5 py-2.5 rounded-xl text-sm transition-all font-medium ${
@@ -672,7 +672,7 @@ export default function ReferencingTool() {
                 <label className="block text-xs text-secondary mb-2 uppercase tracking-wider font-medium">
                   URL (optional — auto-fill info)
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <input
                     type="url"
                     value={urlInput}
@@ -684,7 +684,7 @@ export default function ReferencingTool() {
                   <button
                     onClick={handleAutoFill}
                     disabled={autoFillStatus === "loading"}
-                    className="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap font-medium"
+                    className="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-normal sm:whitespace-nowrap font-medium"
                   >
                     {autoFillStatus === "loading" ? "⟳ Fetching..." : "⟳ Auto-fill"}
                   </button>
@@ -699,7 +699,7 @@ export default function ReferencingTool() {
             )}
 
             {/* Form fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-5">
               {fields.map((field) => (
                 <div key={field.key} className={field.key === "title" || field.key === "authors" ? "sm:col-span-2" : undefined}>
                   <label className="block text-xs text-secondary mb-1.5 uppercase tracking-wider font-medium">
@@ -710,7 +710,7 @@ export default function ReferencingTool() {
                     value={form[field.key] as string}
                     onChange={(e) => updateField(field.key, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
+                    className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50 break-words"
                   />
                 </div>
               ))}
@@ -723,7 +723,7 @@ export default function ReferencingTool() {
                   value={form.url}
                   onChange={(e) => updateField("url", e.target.value)}
                   placeholder="https://..."
-                  className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
+                  className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50 break-words"
                 />
               </div>
               <div>
@@ -797,7 +797,7 @@ export default function ReferencingTool() {
                   <p className="text-xs text-secondary uppercase tracking-wider font-medium">
                     Results ({bulkResults.length} URLs)
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => {
                         const all = new Set<number>();
@@ -842,12 +842,12 @@ export default function ReferencingTool() {
                       <p className="text-sm text-fg truncate font-medium">
                         {result.title || result.url || "Untitled"}
                       </p>
-                      <p className="text-[11px] text-muted truncate">
+                      <p className="text-[11px] text-muted truncate max-w-full">
                         {result.authors ? `${result.authors} · ` : ""}{result.url}
                       </p>
                     </div>
                     {result.error && (
-                      <span className="text-[11px] text-amber-500 shrink-0">
+                      <span className="text-[11px] text-amber-500 shrink-0 break-words max-w-[120px]">
                         {result.error.length > 30 ? result.error.slice(0, 30) + "…" : result.error}
                       </span>
                     )}
@@ -876,7 +876,7 @@ export default function ReferencingTool() {
               Reference List <span className="text-muted font-normal">({references.length})</span>
             </h2>
             {references.length > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={copyAllReferences}
                   className="bg-input hover:bg-gray-50 border border-line text-secondary px-4 py-2 rounded-lg text-sm transition-colors"
@@ -904,18 +904,18 @@ export default function ReferencingTool() {
                   key={ref.id}
                   className="group bg-input border border-line rounded-xl p-4 hover:border-accent/20 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-2 sm:gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <span className="text-sm text-accent font-medium mr-2">[{idx + 1}]</span>
                       <span className="text-[11px] uppercase px-2 py-0.5 rounded bg-gray-100 text-muted font-medium tracking-wider">
                         {SOURCE_TYPES.find((st) => st.value === ref.sourceType)?.label || ref.sourceType}
                       </span>
                       <p
-                        className="mt-2 text-sm text-fg leading-relaxed"
+                        className="mt-2 text-sm text-fg leading-relaxed break-words [overflow-wrap:anywhere]"
                         dangerouslySetInnerHTML={{ __html: citationHtml(ref) }}
                       />
                     </div>
-                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => editReference(ref.id)}
                         className="text-xs text-muted hover:text-accent p-1.5 rounded-lg hover:bg-gray-100 transition-all"
