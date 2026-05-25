@@ -76,6 +76,12 @@ export default function SystemPage() {
             >
               Home
             </a>
+            <a
+              href="/school"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              School
+            </a>
             <span className="text-xs text-[#a78bfa] font-mono border-b border-[#a78bfa]">
               System
             </span>
@@ -107,6 +113,13 @@ export default function SystemPage() {
               onClick={() => setMenuOpen(false)}
             >
               Home
+            </a>
+            <a
+              href="/school"
+              className="block text-sm text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              onClick={() => setMenuOpen(false)}
+            >
+              School
             </a>
             <div className="text-sm text-[#a78bfa] font-mono">System</div>
             {stats && (

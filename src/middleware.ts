@@ -7,6 +7,7 @@ const publicPaths = [
   '/api/auth/login',
   '/api/auth/check',
   '/api/proxy',
+  '/api/phone-usage',
 ];
 
 export async function middleware(request: NextRequest) {

@@ -51,6 +51,12 @@ export default function Dashboard() {
           {/* Desktop nav */}
           <div className="hidden sm:flex items-center gap-4">
             <a
+              href="/school"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              School
+            </a>
+            <a
               href="/system"
               className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
             >
@@ -60,6 +66,12 @@ export default function Dashboard() {
 
           {/* Mobile hamburger */}
           <div className="sm:hidden flex items-center gap-4">
+            <a
+              href="/school"
+              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+            >
+              School
+            </a>
             <a
               href="/system"
               className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
