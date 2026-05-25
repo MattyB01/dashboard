@@ -248,11 +248,9 @@ async function generatePDFs(testData: TestData): Promise<{ testPdf: Uint8Array; 
   let solPage = solDoc.addPage([612, 792]);
   y = 740;
 
-  solPage.drawFontAndSize(solFontBold, 16);
   solPage.drawText(`${testData.title} - WORKED SOLUTIONS`, { x: margin, y, size: 16, font: solFontBold });
   y -= 24;
 
-  solPage.drawFontAndSize(solFont, 10);
   solPage.drawText(`Total: ${testData.total_marks} marks`, { x: margin, y, size: 10, font: solFont });
   y -= 24;
 
@@ -262,11 +260,9 @@ async function generatePDFs(testData: TestData): Promise<{ testPdf: Uint8Array; 
       y = 740;
     }
 
-    solPage.drawFontAndSize(solFontBold, 12);
     solPage.drawText(`Question ${q.id} [${q.marks} marks]`, { x: margin, y, size: 12, font: solFontBold });
     y -= 16;
 
-    solPage.drawFontAndSize(solFont, 9);
     y = drawWrappedText(solDoc, solPage, q.solution, margin + 5, y, maxW - 5, 9, solFont, 13);
     y -= 16;
   }
