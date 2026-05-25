@@ -1,4 +1,18 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+
+@theme {
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --color-surface: #f5f6f8;
+  --color-card: #ffffff;
+  --color-input: #f9fafb;
+  --color-line: #e8ecf1;
+  --color-fg: #1a1a2e;
+  --color-secondary: #6b7280;
+  --color-muted: #9ca3af;
+  --color-accent: #7c3aed;
+  --color-accent-light: #f5f3ff;
+}
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -7,6 +21,7 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: 'Manrope', system-ui, sans-serif;
 }
 
 /* Better touch targets on mobile */
@@ -14,4 +29,9 @@ body {
   button, a, input, select, textarea {
     min-height: 44px;
   }
+}
+
+/* Utility: light theme card shadows */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
 }

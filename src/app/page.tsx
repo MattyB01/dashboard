@@ -35,9 +35,9 @@ export default function Dashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-dvh bg-[#0a0a0f] text-[#e8e8f0] flex flex-col">
+    <div className="min-h-dvh bg-surface text-fg flex flex-col">
       {/* Header */}
-      <header className="border-b border-[#1e1e30] px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 40 40" width="28" height="28" className="shrink-0">
@@ -52,13 +52,13 @@ export default function Dashboard() {
           <div className="hidden sm:flex items-center gap-4">
             <a
               href="/school"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               School
             </a>
             <a
               href="/system"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               System
             </a>
@@ -68,13 +68,13 @@ export default function Dashboard() {
           <div className="sm:hidden flex items-center gap-4">
             <a
               href="/school"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               School
             </a>
             <a
               href="/system"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               System
             </a>
@@ -85,29 +85,29 @@ export default function Dashboard() {
       {/* Verse of the Day — centered */}
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
         <div className="w-full max-w-2xl mx-auto text-center">
-          <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-8 sm:p-10 lg:p-12">
-            <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-[#a78bfa] font-mono mb-6 sm:mb-8">
+          <div className="bg-card card-shadow border border-line rounded-2xl p-8 sm:p-10 lg:p-12">
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-accent mb-6 sm:mb-8">
               ✦ Verse of the Day
             </div>
 
             {loading ? (
-              <div className="text-[#555570] text-base animate-pulse">Loading...</div>
+              <div className="text-muted text-base animate-pulse">Loading...</div>
             ) : verse ? (
               <>
-                <p className="text-lg sm:text-xl lg:text-2xl text-[#e8e8f0] leading-relaxed italic font-light">
+                <p className="text-lg sm:text-xl lg:text-2xl text-fg leading-relaxed italic font-light">
                   &ldquo;{verse.verse}&rdquo;
                 </p>
-                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-[#1e1e30]">
-                  <p className="text-sm sm:text-base text-[#a78bfa] font-mono">
+                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-line">
+                  <p className="text-sm sm:text-base text-accent">
                     {verse.reference}
                   </p>
-                  <p className="text-[11px] text-[#555570] font-mono mt-1">
+                  <p className="text-[11px] text-muted mt-1">
                     {verse.version}
                   </p>
                 </div>
               </>
             ) : (
-              <p className="text-sm text-[#555570]">Verse unavailable</p>
+              <p className="text-sm text-muted">Verse unavailable</p>
             )}
           </div>
         </div>

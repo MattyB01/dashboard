@@ -395,12 +395,12 @@ export default function MathsTestGenerator() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0e0e16] text-[#e8e8f0] flex flex-col">
-      <header className="border-b border-[#1e1e30] px-6 py-4 flex items-center justify-between">
+    <main className="min-h-screen bg-surface text-fg flex flex-col">
+      <header className="border-b border-line px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a href="/" className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono">Home</a>
-          <a href="/school" className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono">School</a>
-          <span className="text-xs text-[#a78bfa] font-mono border-b border-[#a78bfa]">Maths Test Generator</span>
+          <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">Home</a>
+          <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">School</a>
+          <span className="text-xs text-accent border-b border-accent">Maths Test Generator</span>
         </div>
       </header>
 
@@ -408,15 +408,15 @@ export default function MathsTestGenerator() {
         {phase === "form" && (
           <>
             <div className="mb-8">
-              <h1 className="text-2xl font-mono mb-2"><span className="text-[#a78bfa]">∫</span> Maths Test Generator</h1>
-              <p className="text-sm text-[#8888a0] font-mono">Select topics to include in your SACE Stage 2 Maths Methods practice test</p>
+              <h1 className="text-2xl mb-2"><span className="text-accent">∫</span> Maths Test Generator</h1>
+              <p className="text-sm text-secondary">Select topics to include in your SACE Stage 2 Maths Methods practice test</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
               {SACE_TOPICS.map((topic) => {
                 const selected = selectedTopics.includes(topic.id);
                 return (
                   <button key={topic.id} onClick={() => toggleTopic(topic.id)}
-                    className={`text-left p-4 rounded-xl border transition-all font-mono ${selected ? "bg-[#a78bfa]/10 border-[#a78bfa] text-[#a78bfa]" : "bg-[#16161f] border-[#1e1e30] text-[#8888a0] hover:border-[#555570]"}`}>
+                    className={`text-left p-4 rounded-xl border transition-all ${selected ? "bg-accent-light border-accent text-accent" : "bg-card card-shadow border-line text-secondary hover:border-gray-300"}`}>
                     <div className="text-sm">{topic.label}</div>
                     <div className="text-[11px] mt-1 opacity-60">{topic.chapters.join(", ")}</div>
                   </button>
@@ -424,25 +424,25 @@ export default function MathsTestGenerator() {
               })}
             </div>
             <button onClick={generateTest} disabled={selectedTopics.length === 0}
-              className={`w-full py-4 rounded-xl font-mono text-sm transition-all ${selectedTopics.length === 0 ? "bg-[#1e1e30] text-[#555570] cursor-not-allowed" : "bg-[#a78bfa] text-[#0e0e16] hover:bg-[#b99cfb]"}`}>
+              className={`w-full py-4 rounded-xl text-sm transition-all ${selectedTopics.length === 0 ? "bg-gray-100 text-muted cursor-not-allowed" : "bg-accent text-white hover:bg-[#6d28d9]"}`}>
               Generate Test
             </button>
-            {error && <div className="mt-4 p-4 bg-red-900/20 border border-red-800/50 rounded-xl"><p className="text-sm text-red-400 font-mono">{error}</p></div>}
+            {error && <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl"><p className="text-sm text-red-500">{error}</p></div>}
           </>
         )}
 
         {(phase === "planning" || phase === "generating") && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-[#a78bfa]/10 border border-[#a78bfa]/30 flex items-center justify-center mb-6 animate-pulse">
-              <span className="text-2xl text-[#a78bfa]">∫</span>
+            <div className="w-16 h-16 rounded-2xl bg-accent-light border border-accent/20 flex items-center justify-center mb-6 animate-pulse">
+              <span className="text-2xl text-accent">∫</span>
             </div>
-            <p className="text-sm text-[#e8e8f0] font-mono mb-4">{progress.message}</p>
+            <p className="text-sm text-fg mb-4">{progress.message}</p>
             {phase === "generating" && progress.total > 0 && (
-              <div className="w-full max-w-xs bg-[#1e1e30] rounded-full h-2 mb-2 overflow-hidden">
-                <div className="h-full bg-[#a78bfa] rounded-full transition-all duration-500" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+              <div className="w-full max-w-xs bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+                <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
               </div>
             )}
-            <p className="text-xs text-[#555570] font-mono">
+            <p className="text-xs text-muted">
               {phase === "planning" ? "Designing test structure..." : `Question ${progress.current} of ${progress.total}`}
             </p>
           </div>
@@ -452,37 +452,37 @@ export default function MathsTestGenerator() {
           <>
             <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
               <button onClick={() => setPhase("form")}
-                className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono">← New test</button>
+                className="text-xs text-secondary hover:text-fg transition-colors">← New test</button>
               <div className="flex gap-3">
                 <button onClick={() => downloadSAT(buildSATHTML(testData, "test"))}
-                  className="px-4 py-2 bg-[#a78bfa] text-[#0e0e16] rounded-xl text-xs font-mono hover:bg-[#b99cfb] transition-colors">
+                  className="px-4 py-2 bg-accent text-white rounded-xl text-xs hover:bg-[#6d28d9] transition-colors">
                   Download Test PDF
                 </button>
                 <button onClick={() => downloadSAT(buildSATHTML(testData, "solutions"))}
-                  className="px-4 py-2 bg-[#1e1e30] text-[#e8e8f0] rounded-xl text-xs font-mono hover:bg-[#2a2a40] transition-colors border border-[#333350]">
+                  className="px-4 py-2 bg-gray-100 text-fg rounded-xl text-xs hover:bg-gray-50 transition-colors border border-line">
                   Download Solutions PDF
                 </button>
               </div>
             </div>
 
             {/* Web preview */}
-            <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 lg:p-8 mb-6">
-              <h1 className="text-xl font-mono text-[#e8e8f0] mb-2">{testData.title}</h1>
-              <p className="text-xs text-[#8888a0] font-mono mb-4">Total: {testData.total_marks} marks · Time: {testData.time_allowed} · {testData.topics.join(", ")}</p>
+            <div className="bg-card card-shadow border border-line rounded-2xl p-6 lg:p-8 mb-6">
+              <h1 className="text-xl text-fg mb-2">{testData.title}</h1>
+              <p className="text-xs text-secondary mb-4">Total: {testData.total_marks} marks · Time: {testData.time_allowed} · {testData.topics.join(", ")}</p>
               <div className="space-y-8">
                 {testData.questions.map((q) => (
-                  <div key={q.id} className="border-t border-[#1e1e30] pt-6">
+                  <div key={q.id} className="border-t border-line pt-6">
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-sm font-mono text-[#e8e8f0]">Question {q.id}</h3>
-                      <span className="text-[11px] text-[#8888a0] font-mono">[{q.marks} marks]</span>
+                      <h3 className="text-sm text-fg">Question {q.id}</h3>
+                      <span className="text-[11px] text-secondary">[{q.marks} marks]</span>
                     </div>
-                    {q.question && <div className="text-sm text-[#c8c8d8] font-mono leading-relaxed mb-4"><MathText text={q.question} /></div>}
+                    {q.question && <div className="text-sm text-gray-700 leading-relaxed mb-4"><MathText text={q.question} /></div>}
                     <div className="space-y-2">
                       {q.parts.map((part) => (
                         <div key={part.label} className="flex items-start gap-3">
-                          <span className="text-xs text-[#a78bfa] font-mono mt-0.5 shrink-0">({part.label})</span>
-                          <div className="text-sm text-[#c8c8d8] font-mono leading-relaxed"><MathText text={part.text} /></div>
-                          <span className="text-[11px] text-[#555570] font-mono shrink-0 ml-auto">[{part.marks}]</span>
+                          <span className="text-xs text-accent mt-0.5 shrink-0">({part.label})</span>
+                          <div className="text-sm text-gray-700 leading-relaxed"><MathText text={part.text} /></div>
+                          <span className="text-[11px] text-muted shrink-0 ml-auto">[{part.marks}]</span>
                         </div>
                       ))}
                     </div>
@@ -492,13 +492,13 @@ export default function MathsTestGenerator() {
             </div>
 
             {/* Web solutions preview */}
-            <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 lg:p-8">
-              <h2 className="text-lg font-mono text-[#e8e8f0] mb-6">✦ Worked Solutions</h2>
+            <div className="bg-card card-shadow border border-line rounded-2xl p-6 lg:p-8">
+              <h2 className="text-lg text-fg mb-6">✦ Worked Solutions</h2>
               <div className="space-y-6">
                 {testData.questions.map((q) => (
-                  <div key={q.id} className="border-t border-[#1e1e30] pt-4">
-                    <h3 className="text-sm font-mono text-[#a78bfa] mb-3">Question {q.id} [{q.marks} marks]</h3>
-                    <div className="text-sm text-[#c8c8d8] font-mono leading-relaxed whitespace-pre-wrap"><MathText text={q.solution} /></div>
+                  <div key={q.id} className="border-t border-line pt-4">
+                    <h3 className="text-sm text-accent mb-3">Question {q.id} [{q.marks} marks]</h3>
+                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap"><MathText text={q.solution} /></div>
                   </div>
                 ))}
               </div>
@@ -508,8 +508,8 @@ export default function MathsTestGenerator() {
 
         {phase === "error" && (
           <div className="text-center py-12">
-            <p className="text-red-400 font-mono text-sm mb-4">{error}</p>
-            <button onClick={() => setPhase("form")} className="text-xs text-[#a78bfa] hover:text-[#b99cfb] font-mono">← Try again</button>
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+            <button onClick={() => setPhase("form")} className="text-xs text-accent hover:text-[#b99cfb]">← Try again</button>
           </div>
         )}
       </div>

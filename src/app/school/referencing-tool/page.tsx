@@ -19,7 +19,7 @@ interface Reference {
   pages: string;
   doi: string;
   year: string;
-  date: string; // full date for APA ("2024, March 15" or "2024" or "n.d.")
+  date: string;
   url: string;
   accessedDate: string;
   edition: string;
@@ -127,7 +127,6 @@ function todayFormatted(): string {
 
 function formatDateForAPA(raw: string): string {
   if (!raw) return "n.d.";
-  // Try parsing as full date first
   const d = new Date(raw);
   if (!isNaN(d.getTime())) {
     return d.toLocaleDateString("en-AU", {
@@ -136,9 +135,8 @@ function formatDateForAPA(raw: string): string {
       day: "numeric",
     });
   }
-  // If just a year
   if (/^\d{4}$/.test(raw)) return raw;
-  return raw; // keep as-is
+  return raw;
 }
 
 function cleanUrl(url: string): string {
@@ -209,7 +207,6 @@ function citationHtml(ref: Reference): string {
 }
 
 function citationPlain(ref: Reference): string {
-  // Strip <em> tags
   return citationHtml(ref).replace(/<\/?em>/g, "");
 }
 
@@ -223,14 +220,12 @@ export default function ReferencingTool() {
   const [references, setReferences] = useState<Reference[]>([]);
   const [tab, setTab] = useState<"single" | "bulk">("single");
 
-  // Form state
   const [sourceType, setSourceType] = useState<SourceType>("website");
   const [urlInput, setUrlInput] = useState("");
   const [autoFillStatus, setAutoFillStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [autoFillError, setAutoFillError] = useState("");
   const [form, setForm] = useState<Reference>(emptyRef());
 
-  // Bulk state
   const [bulkInput, setBulkInput] = useState("");
   const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
   const [bulkStatus, setBulkStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -287,15 +282,14 @@ export default function ReferencingTool() {
           : l
       );
     } else {
-      const newList: SavedList = {
+      lists.push({
         id: uid(),
         title: currentTitle,
         references,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
-      lists.push(newList);
-      setCurrentListId(newList.id);
+      });
+      setCurrentListId(lists[lists.length - 1].id);
     }
     persistLists(lists);
   }
@@ -307,9 +301,7 @@ export default function ReferencingTool() {
   }
 
   function newList() {
-    if (references.length > 0) {
-      if (!confirm("Discard current list and start fresh?")) return;
-    }
+    if (references.length > 0 && !confirm("Discard current list and start fresh?")) return;
     setCurrentListId(null);
     setCurrentTitle("Untitled List");
     setReferences([]);
@@ -319,8 +311,7 @@ export default function ReferencingTool() {
 
   function deleteList(id: string) {
     if (!confirm("Delete this saved list?")) return;
-    const lists = savedLists.filter((l) => l.id !== id);
-    persistLists(lists);
+    persistLists(savedLists.filter((l) => l.id !== id));
     if (currentListId === id) {
       setCurrentListId(null);
       setCurrentTitle("Untitled List");
@@ -331,24 +322,10 @@ export default function ReferencingTool() {
   // ── Form helpers ──
   function emptyRef(): Reference {
     return {
-      id: "",
-      sourceType: "website",
-      authors: "",
-      title: "",
-      siteName: "",
-      publisher: "",
-      journalName: "",
-      volume: "",
-      issue: "",
-      pages: "",
-      doi: "",
-      year: "",
-      date: "",
-      url: "",
-      accessedDate: todayFormatted(),
-      edition: "",
-      reportNumber: "",
-      channel: "",
+      id: "", sourceType: "website", authors: "", title: "", siteName: "",
+      publisher: "", journalName: "", volume: "", issue: "", pages: "", doi: "",
+      year: "", date: "", url: "", accessedDate: todayFormatted(), edition: "",
+      reportNumber: "", channel: "",
     };
   }
 
@@ -363,10 +340,9 @@ export default function ReferencingTool() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  // When source type changes, reset form but keep type
   function changeSourceType(st: SourceType) {
     setSourceType(st);
-    setForm((f) => ({ ...emptyRef(), sourceType: st, accessedDate: todayFormatted() }));
+    setForm({ ...emptyRef(), sourceType: st, accessedDate: todayFormatted() });
     setUrlInput("");
     setAutoFillStatus("idle");
     setAutoFillError("");
@@ -396,18 +372,15 @@ export default function ReferencingTool() {
         return;
       }
 
-      // Detect source type from result
       const detectedType = (data.sourceType as SourceType) || sourceType;
       setSourceType(detectedType);
 
-      // Format date for APA
       const dateStr = data.publicationDate
         ? formatDateForAPA(data.publicationDate)
         : "";
 
       setForm({
-        id: "",
-        sourceType: detectedType,
+        id: "", sourceType: detectedType,
         authors: data.authors || "",
         title: data.title || "",
         siteName: data.siteName || data.publisher || "",
@@ -421,9 +394,7 @@ export default function ReferencingTool() {
         date: dateStr,
         url: cleanUrl(urlInput),
         accessedDate: todayFormatted(),
-        edition: "",
-        reportNumber: "",
-        channel: "",
+        edition: "", reportNumber: "", channel: "",
       });
 
       setAutoFillStatus("done");
@@ -439,14 +410,7 @@ export default function ReferencingTool() {
       alert("Title is required.");
       return;
     }
-
-    const newRef: Reference = {
-      ...form,
-      id: uid(),
-      sourceType,
-      url: cleanUrl(urlInput || form.url),
-    };
-    setReferences((r) => [...r, newRef]);
+    setReferences((r) => [...r, { ...form, id: uid(), sourceType, url: cleanUrl(urlInput || form.url) }]);
     resetForm();
   }
 
@@ -462,20 +426,14 @@ export default function ReferencingTool() {
     setUrlInput(ref.url);
     setAutoFillStatus("idle");
     setAutoFillError("");
-    // Remove from list so user can re-add
     setReferences((r) => r.filter((x) => x.id !== id));
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // ── Bulk processing ──
   async function handleBulkProcess() {
-    const urls = bulkInput
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const urls = bulkInput.split("\n").map((s) => s.trim()).filter(Boolean);
     if (urls.length === 0) return;
-
     setBulkStatus("loading");
     setBulkResults([]);
     setSelectedBulk(new Set());
@@ -489,10 +447,9 @@ export default function ReferencingTool() {
       const data = await res.json();
       const results: BulkResult[] = data.results || [];
       setBulkResults(results);
-      // Auto-select all successful ones
       setSelectedBulk(new Set(results.map((_, i) => i).filter((i) => !results[i].error)));
       setBulkStatus("done");
-    } catch (err: any) {
+    } catch {
       setBulkStatus("error");
     }
   }
@@ -505,24 +462,16 @@ export default function ReferencingTool() {
       const dateStr = r.publicationDate ? formatDateForAPA(r.publicationDate) : "";
       const detectedType = (r.sourceType as SourceType) || "website";
       newRefs.push({
-        id: uid(),
-        sourceType: detectedType,
-        authors: r.authors || "",
-        title: r.title || "",
+        id: uid(), sourceType: detectedType,
+        authors: r.authors || "", title: r.title || "",
         siteName: r.siteName || r.publisher || "",
         publisher: r.publisher || r.siteName || "",
         journalName: r.journalName || "",
-        volume: r.volume || "",
-        issue: r.issue || "",
-        pages: r.pages || "",
-        doi: r.doi || "",
+        volume: r.volume || "", issue: r.issue || "",
+        pages: r.pages || "", doi: r.doi || "",
         year: dateStr.match(/^\d{4}/)?.[0] || "",
-        date: dateStr,
-        url: cleanUrl(r.url),
-        accessedDate: todayFormatted(),
-        edition: "",
-        reportNumber: "",
-        channel: "",
+        date: dateStr, url: cleanUrl(r.url),
+        accessedDate: todayFormatted(), edition: "", reportNumber: "", channel: "",
       });
     }
     if (newRefs.length > 0) {
@@ -543,24 +492,21 @@ export default function ReferencingTool() {
     });
   }
 
-  // ── Copy all ──
+  // ── Copy & Export ──
   async function copyAllReferences() {
     const text = references.map((r) => citationPlain(r)).join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");
       document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function exportAsTxt() {
@@ -579,29 +525,20 @@ export default function ReferencingTool() {
   const fields = SOURCE_FIELDS[sourceType];
 
   return (
-    <main className="min-h-screen bg-[#0e0e16] text-[#e8e8f0] flex flex-col">
+    <main className="min-h-screen bg-surface text-fg flex flex-col">
       {/* Header */}
-      <header className="border-b border-[#1e1e30] px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-line px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a
-            href="/school"
-            className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
-          >
+          <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
             ← School
           </a>
-          <span className="text-xs text-[#a78bfa] font-mono border-b border-[#a78bfa]">
+          <span className="text-xs text-accent border-b border-accent">
             Referencing Tool
           </span>
-          <a
-            href="/"
-            className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
-          >
+          <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">
             Home
           </a>
-          <a
-            href="/system"
-            className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
-          >
+          <a href="/system" className="text-xs text-secondary hover:text-fg transition-colors">
             System
           </a>
         </div>
@@ -611,59 +548,56 @@ export default function ReferencingTool() {
       <div className="flex-1 px-6 py-8 max-w-5xl mx-auto w-full">
         {/* Title */}
         <div className="mb-8">
-          <h1 className="text-2xl font-mono text-[#e8e8f0] mb-2">
-            <span className="text-[#a78bfa]">✦</span> Referencing Tool
+          <h1 className="text-2xl text-fg mb-2 font-bold tracking-tight">
+            <span className="text-accent">✦</span> Referencing Tool
           </h1>
-          <p className="text-sm text-[#8888a0] font-mono">
+          <p className="text-sm text-secondary">
             APA 7th edition — auto-fill from URLs or enter manually
           </p>
         </div>
 
         {/* ── List management ── */}
-        <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-5 mb-6">
+        <div className="bg-card border border-line rounded-2xl p-5 mb-6 card-shadow">
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
               value={currentTitle}
               onChange={(e) => setCurrentTitle(e.target.value)}
               placeholder="Reference list title..."
-              className="flex-1 min-w-[200px] bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-2.5 text-sm text-[#e8e8f0] font-mono placeholder:text-[#555570] focus:outline-none focus:border-[#a78bfa]/50"
+              className="flex-1 min-w-[200px] bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
             />
             <button
               onClick={saveCurrentList}
-              className="bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 border border-[#a78bfa]/30 text-[#a78bfa] px-4 py-2.5 rounded-lg text-sm font-mono transition-colors"
+              className="bg-accent-light hover:bg-accent/20 border border-accent/20 text-accent px-4 py-2.5 rounded-lg text-sm transition-colors font-medium"
             >
               💾 Save
             </button>
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowListDropdown(!showListDropdown)}
-                className="bg-[#1a1a28] hover:bg-[#1e1e30] border border-[#1e1e30] text-[#8888a0] px-4 py-2.5 rounded-lg text-sm font-mono transition-colors"
+                className="bg-input hover:bg-gray-50 border border-line text-secondary px-4 py-2.5 rounded-lg text-sm transition-colors"
               >
                 📂 Load ▾
               </button>
               {showListDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-[#16161f] border border-[#1e1e30] rounded-xl p-2 w-64 shadow-2xl z-10">
+                <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-xl p-2 w-64 shadow-xl z-10">
                   {savedLists.length === 0 ? (
-                    <p className="text-sm text-[#555570] font-mono p-3">No saved lists yet</p>
+                    <p className="text-sm text-muted p-3">No saved lists yet</p>
                   ) : (
                     savedLists.map((list) => (
-                      <div key={list.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-[#1a1a28] group">
+                      <div key={list.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 group">
                         <button
-                          onClick={() => {
-                            loadList(list);
-                            setShowListDropdown(false);
-                          }}
-                          className="text-sm text-[#8888a0] hover:text-[#e8e8f0] font-mono text-left flex-1 truncate"
+                          onClick={() => { loadList(list); setShowListDropdown(false); }}
+                          className="text-sm text-secondary hover:text-fg text-left flex-1 truncate"
                         >
                           {list.title}
-                          <span className="block text-[11px] text-[#555570]">
+                          <span className="block text-[11px] text-muted">
                             {list.references.length} refs · {new Date(list.updatedAt).toLocaleDateString()}
                           </span>
                         </button>
                         <button
                           onClick={() => deleteList(list.id)}
-                          className="text-xs text-[#555570] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1"
+                          className="text-xs text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
                           title="Delete"
                         >
                           ✕
@@ -676,7 +610,7 @@ export default function ReferencingTool() {
             </div>
             <button
               onClick={newList}
-              className="bg-[#1a1a28] hover:bg-[#1e1e30] border border-[#1e1e30] text-[#8888a0] px-4 py-2.5 rounded-lg text-sm font-mono transition-colors"
+              className="bg-input hover:bg-gray-50 border border-line text-secondary px-4 py-2.5 rounded-lg text-sm transition-colors"
             >
               🆕 New
             </button>
@@ -684,23 +618,23 @@ export default function ReferencingTool() {
         </div>
 
         {/* ── Tabs: Single / Bulk ── */}
-        <div className="mb-6 flex gap-1 bg-[#16161f] border border-[#1e1e30] rounded-2xl p-1 w-fit">
+        <div className="mb-6 flex gap-1 bg-card border border-line rounded-2xl p-1 w-fit card-shadow">
           <button
             onClick={() => setTab("single")}
-            className={`px-5 py-2.5 rounded-xl text-sm font-mono transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-sm transition-all font-medium ${
               tab === "single"
-                ? "bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/30"
-                : "text-[#555570] hover:text-[#8888a0]"
+                ? "bg-accent text-white shadow-sm"
+                : "text-secondary hover:text-fg"
             }`}
           >
             Single Entry
           </button>
           <button
             onClick={() => setTab("bulk")}
-            className={`px-5 py-2.5 rounded-xl text-sm font-mono transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-sm transition-all font-medium ${
               tab === "bulk"
-                ? "bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/30"
-                : "text-[#555570] hover:text-[#8888a0]"
+                ? "bg-accent text-white shadow-sm"
+                : "text-secondary hover:text-fg"
             }`}
           >
             Bulk URLs
@@ -709,10 +643,10 @@ export default function ReferencingTool() {
 
         {/* ── Single Entry Tab ── */}
         {tab === "single" && (
-          <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 mb-6">
+          <div className="bg-card border border-line rounded-2xl p-6 mb-6 card-shadow">
             {/* Source type selector */}
             <div className="mb-5">
-              <label className="block text-xs font-mono text-[#8888a0] mb-2 uppercase tracking-wider">
+              <label className="block text-xs text-secondary mb-2 uppercase tracking-wider font-medium">
                 Source Type
               </label>
               <div className="flex flex-wrap gap-2">
@@ -720,10 +654,10 @@ export default function ReferencingTool() {
                   <button
                     key={st.value}
                     onClick={() => changeSourceType(st.value)}
-                    className={`px-4 py-2 rounded-xl text-sm font-mono transition-all border ${
+                    className={`px-4 py-2 rounded-xl text-sm transition-all border ${
                       sourceType === st.value
-                        ? "bg-[#a78bfa]/20 text-[#a78bfa] border-[#a78bfa]/40"
-                        : "bg-[#1a1a28] text-[#8888a0] border-[#1e1e30] hover:border-[#555570]"
+                        ? "bg-accent-light text-accent border-accent/30 font-medium"
+                        : "bg-input text-secondary border-line hover:border-gray-300"
                     }`}
                   >
                     {st.icon} {st.label}
@@ -735,7 +669,7 @@ export default function ReferencingTool() {
             {/* URL input + auto-fill */}
             {["website", "news", "journal", "youtube", "report"].includes(sourceType) && (
               <div className="mb-5">
-                <label className="block text-xs font-mono text-[#8888a0] mb-2 uppercase tracking-wider">
+                <label className="block text-xs text-secondary mb-2 uppercase tracking-wider font-medium">
                   URL (optional — auto-fill info)
                 </label>
                 <div className="flex gap-2">
@@ -743,29 +677,23 @@ export default function ReferencingTool() {
                     type="url"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAutoFill();
-                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAutoFill(); }}
                     placeholder="https://example.com/article"
-                    className="flex-1 bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-2.5 text-sm text-[#e8e8f0] font-mono placeholder:text-[#555570] focus:outline-none focus:border-[#a78bfa]/50"
+                    className="flex-1 bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
                   />
                   <button
                     onClick={handleAutoFill}
                     disabled={autoFillStatus === "loading"}
-                    className="bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 border border-[#a78bfa]/30 text-[#a78bfa] px-5 py-2.5 rounded-lg text-sm font-mono transition-colors disabled:opacity-50 whitespace-nowrap"
+                    className="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap font-medium"
                   >
                     {autoFillStatus === "loading" ? "⟳ Fetching..." : "⟳ Auto-fill"}
                   </button>
                 </div>
                 {autoFillStatus === "error" && (
-                  <p className="mt-2 text-xs text-yellow-400 font-mono">
-                    ⚠ {autoFillError} — fill in the fields below manually
-                  </p>
+                  <p className="mt-2 text-xs text-amber-500">⚠ {autoFillError} — fill in the fields below manually</p>
                 )}
                 {autoFillStatus === "done" && (
-                  <p className="mt-2 text-xs text-green-400 font-mono">
-                    ✓ Auto-filled from URL — review and edit below
-                  </p>
+                  <p className="mt-2 text-xs text-emerald-600">✓ Auto-filled from URL — review and edit below</p>
                 )}
               </div>
             )}
@@ -773,13 +701,8 @@ export default function ReferencingTool() {
             {/* Form fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               {fields.map((field) => (
-                <div
-                  key={field.key}
-                  className={field.key === "title" || field.key === "authors"
-                    ? "sm:col-span-2"
-                    : undefined}
-                >
-                  <label className="block text-xs font-mono text-[#8888a0] mb-1.5 uppercase tracking-wider">
+                <div key={field.key} className={field.key === "title" || field.key === "authors" ? "sm:col-span-2" : undefined}>
+                  <label className="block text-xs text-secondary mb-1.5 uppercase tracking-wider font-medium">
                     {field.label}{field.required ? " *" : ""}
                   </label>
                   <input
@@ -787,13 +710,12 @@ export default function ReferencingTool() {
                     value={form[field.key] as string}
                     onChange={(e) => updateField(field.key, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-2.5 text-sm text-[#e8e8f0] font-mono placeholder:text-[#555570] focus:outline-none focus:border-[#a78bfa]/50"
+                    className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
                   />
                 </div>
               ))}
-              {/* URL field always shown for reference */}
               <div className="sm:col-span-2">
-                <label className="block text-xs font-mono text-[#8888a0] mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs text-secondary mb-1.5 uppercase tracking-wider font-medium">
                   URL
                 </label>
                 <input
@@ -801,31 +723,28 @@ export default function ReferencingTool() {
                   value={form.url}
                   onChange={(e) => updateField("url", e.target.value)}
                   placeholder="https://..."
-                  className="w-full bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-2.5 text-sm text-[#e8e8f0] font-mono placeholder:text-[#555570] focus:outline-none focus:border-[#a78bfa]/50"
+                  className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50"
                 />
               </div>
-              {/* Access date */}
               <div>
-                <label className="block text-xs font-mono text-[#8888a0] mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs text-secondary mb-1.5 uppercase tracking-wider font-medium">
                   Accessed Date
                 </label>
                 <input
                   type="text"
                   value={form.accessedDate}
                   onChange={(e) => updateField("accessedDate", e.target.value)}
-                  className="w-full bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-2.5 text-sm text-[#e8e8f0] font-mono focus:outline-none focus:border-[#a78bfa]/50"
+                  className="w-full bg-input border border-line rounded-lg px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent/50"
                 />
               </div>
             </div>
 
             {/* Preview */}
             {form.title && (
-              <div className="mb-5 p-4 bg-[#1a1a28] border border-[#1e1e30] rounded-xl">
-                <p className="text-[11px] text-[#555570] font-mono mb-2 uppercase tracking-wider">
-                  Preview
-                </p>
+              <div className="mb-5 p-4 bg-input border border-line rounded-xl">
+                <p className="text-[11px] text-muted mb-2 uppercase tracking-wider font-medium">Preview</p>
                 <p
-                  className="text-sm text-[#e8e8f0] leading-relaxed"
+                  className="text-sm text-fg leading-relaxed"
                   dangerouslySetInnerHTML={{
                     __html: citationHtml({ ...form, sourceType, id: "", url: cleanUrl(urlInput || form.url) }),
                   }}
@@ -837,25 +756,22 @@ export default function ReferencingTool() {
             <button
               onClick={addReference}
               disabled={!form.title.trim()}
-              className="bg-[#a78bfa] hover:bg-[#b99cfb] text-[#0e0e16] px-6 py-3 rounded-xl text-sm font-mono font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="bg-accent hover:bg-[#6d28d9] text-white px-6 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               + Add to Reference List
             </button>
 
-            {/* Hint */}
             {!form.title.trim() && (
-              <p className="mt-2 text-xs text-[#555570] font-mono">
-                Fill in at least the title to add a reference
-              </p>
+              <p className="mt-2 text-xs text-muted">Fill in at least the title to add a reference</p>
             )}
           </div>
         )}
 
         {/* ── Bulk URLs Tab ── */}
         {tab === "bulk" && (
-          <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 mb-6">
+          <div className="bg-card border border-line rounded-2xl p-6 mb-6 card-shadow">
             <div className="mb-4">
-              <label className="block text-xs font-mono text-[#8888a0] mb-2 uppercase tracking-wider">
+              <label className="block text-xs text-secondary mb-2 uppercase tracking-wider font-medium">
                 Paste URLs (one per line)
               </label>
               <textarea
@@ -863,13 +779,13 @@ export default function ReferencingTool() {
                 onChange={(e) => setBulkInput(e.target.value)}
                 placeholder={"https://example.com/article-1\nhttps://theguardian.com/news\nhttps://youtube.com/watch?v=xxx"}
                 rows={6}
-                className="w-full bg-[#1a1a28] border border-[#1e1e30] rounded-lg px-4 py-3 text-sm text-[#e8e8f0] font-mono placeholder:text-[#555570] focus:outline-none focus:border-[#a78bfa]/50 resize-y"
+                className="w-full bg-input border border-line rounded-lg px-4 py-3 text-sm text-fg placeholder:text-muted focus:outline-none focus:border-accent/50 resize-y"
               />
             </div>
             <button
               onClick={handleBulkProcess}
               disabled={bulkStatus === "loading" || !bulkInput.trim()}
-              className="bg-[#a78bfa]/10 hover:bg-[#a78bfa]/20 border border-[#a78bfa]/30 text-[#a78bfa] px-6 py-2.5 rounded-lg text-sm font-mono transition-colors disabled:opacity-50"
+              className="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent px-6 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 font-medium"
             >
               {bulkStatus === "loading" ? "⟳ Processing..." : "⟳ Process URLs →"}
             </button>
@@ -878,26 +794,21 @@ export default function ReferencingTool() {
             {bulkResults.length > 0 && (
               <div className="mt-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-mono text-[#8888a0] uppercase tracking-wider">
+                  <p className="text-xs text-secondary uppercase tracking-wider font-medium">
                     Results ({bulkResults.length} URLs)
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
                         const all = new Set<number>();
-                        bulkResults.forEach((_, i) => {
-                          if (!bulkResults[i].error) all.add(i);
-                        });
+                        bulkResults.forEach((_, i) => { if (!bulkResults[i].error) all.add(i); });
                         setSelectedBulk(all);
                       }}
-                      className="text-xs text-[#555570] hover:text-[#8888a0] font-mono transition-colors"
+                      className="text-xs text-muted hover:text-secondary transition-colors"
                     >
                       Select all valid
                     </button>
-                    <button
-                      onClick={() => setSelectedBulk(new Set())}
-                      className="text-xs text-[#555570] hover:text-[#8888a0] font-mono transition-colors"
-                    >
+                    <button onClick={() => setSelectedBulk(new Set())} className="text-xs text-muted hover:text-secondary transition-colors">
                       Clear
                     </button>
                   </div>
@@ -908,10 +819,10 @@ export default function ReferencingTool() {
                     key={idx}
                     className={`flex items-start gap-3 p-3 rounded-xl mb-2 border transition-colors ${
                       result.error
-                        ? "bg-[#1a1a28]/50 border-yellow-900/30 opacity-60"
+                        ? "bg-gray-50 border-amber-200/50 opacity-60"
                         : selectedBulk.has(idx)
-                        ? "bg-[#a78bfa]/5 border-[#a78bfa]/30"
-                        : "bg-[#1a1a28] border-[#1e1e30] hover:border-[#555570]"
+                        ? "bg-accent/5 border-accent/30"
+                        : "bg-input border-line hover:border-gray-300"
                     }`}
                   >
                     <input
@@ -919,32 +830,29 @@ export default function ReferencingTool() {
                       checked={selectedBulk.has(idx)}
                       onChange={() => toggleBulkItem(idx)}
                       disabled={!!result.error}
-                      className="mt-1 accent-[#a78bfa]"
+                      className="mt-1 accent-accent"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded bg-[#1e1e30] text-[#555570]">
+                        <span className="text-[11px] uppercase px-2 py-0.5 rounded bg-gray-100 text-muted font-medium tracking-wider">
                           {result.sourceType || "website"}
                         </span>
-                        {result.error && (
-                          <span className="text-[11px] text-yellow-400 font-mono">⚠ Error</span>
-                        )}
+                        {result.error && <span className="text-[11px] text-amber-500">⚠ Error</span>}
                       </div>
-                      <p className="text-sm text-[#e8e8f0] font-mono truncate">
+                      <p className="text-sm text-fg truncate font-medium">
                         {result.title || result.url || "Untitled"}
                       </p>
-                      <p className="text-[11px] text-[#555570] font-mono truncate">
-                        {result.authors ? `${result.authors} · ` : ""}
-                        {result.url}
+                      <p className="text-[11px] text-muted truncate">
+                        {result.authors ? `${result.authors} · ` : ""}{result.url}
                       </p>
                     </div>
                     {result.error && (
-                      <span className="text-[11px] text-yellow-400 font-mono shrink-0">
+                      <span className="text-[11px] text-amber-500 shrink-0">
                         {result.error.length > 30 ? result.error.slice(0, 30) + "…" : result.error}
                       </span>
                     )}
                     {!result.error && result.title && (
-                      <span className="text-[11px] text-green-400 font-mono shrink-0">✓</span>
+                      <span className="text-[11px] text-emerald-600 shrink-0">✓</span>
                     )}
                   </div>
                 ))}
@@ -952,7 +860,7 @@ export default function ReferencingTool() {
                 <button
                   onClick={addSelectedBulk}
                   disabled={selectedBulk.size === 0}
-                  className="mt-4 bg-[#a78bfa] hover:bg-[#b99cfb] text-[#0e0e16] px-6 py-3 rounded-xl text-sm font-mono font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="mt-4 bg-accent hover:bg-[#6d28d9] text-white px-6 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   + Add Selected ({selectedBulk.size}) to List
                 </button>
@@ -962,22 +870,22 @@ export default function ReferencingTool() {
         )}
 
         {/* ── Reference List ── */}
-        <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-mono text-[#e8e8f0]">
-              Reference List <span className="text-[#555570]">({references.length})</span>
+        <div className="bg-card border border-line rounded-2xl p-6 mb-6 card-shadow">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h2 className="text-base text-fg font-bold tracking-tight">
+              Reference List <span className="text-muted font-normal">({references.length})</span>
             </h2>
             {references.length > 0 && (
               <div className="flex gap-2">
                 <button
                   onClick={copyAllReferences}
-                  className="bg-[#1a1a28] hover:bg-[#1e1e30] border border-[#1e1e30] text-[#8888a0] px-4 py-2 rounded-lg text-sm font-mono transition-colors"
+                  className="bg-input hover:bg-gray-50 border border-line text-secondary px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   {copied ? "✓ Copied!" : "📋 Copy All"}
                 </button>
                 <button
                   onClick={exportAsTxt}
-                  className="bg-[#1a1a28] hover:bg-[#1e1e30] border border-[#1e1e30] text-[#8888a0] px-4 py-2 rounded-lg text-sm font-mono transition-colors"
+                  className="bg-input hover:bg-gray-50 border border-line text-secondary px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   ⬇ Export .txt
                 </button>
@@ -987,41 +895,37 @@ export default function ReferencingTool() {
 
           {references.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-sm text-[#555570] font-mono">
-                No references yet. Add one using the form above.
-              </p>
+              <p className="text-sm text-muted">No references yet. Add one using the form above.</p>
             </div>
           ) : (
             <ol className="space-y-3">
               {references.map((ref, idx) => (
                 <li
                   key={ref.id}
-                  className="group bg-[#1a1a28] border border-[#1e1e30] rounded-xl p-4 hover:border-[#a78bfa]/20 transition-colors"
+                  className="group bg-input border border-line rounded-xl p-4 hover:border-accent/20 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <span className="text-[11px] text-[#a78bfa] font-mono mr-2">
-                        [{idx + 1}]
-                      </span>
-                      <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded bg-[#1e1e30] text-[#555570]">
+                      <span className="text-sm text-accent font-medium mr-2">[{idx + 1}]</span>
+                      <span className="text-[11px] uppercase px-2 py-0.5 rounded bg-gray-100 text-muted font-medium tracking-wider">
                         {SOURCE_TYPES.find((st) => st.value === ref.sourceType)?.label || ref.sourceType}
                       </span>
                       <p
-                        className="mt-2 text-sm text-[#e8e8f0] leading-relaxed"
+                        className="mt-2 text-sm text-fg leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: citationHtml(ref) }}
                       />
                     </div>
                     <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => editReference(ref.id)}
-                        className="text-xs text-[#555570] hover:text-[#a78bfa] p-1.5 rounded-lg hover:bg-[#1e1e30] transition-all"
+                        className="text-xs text-muted hover:text-accent p-1.5 rounded-lg hover:bg-gray-100 transition-all"
                         title="Edit"
                       >
                         ✏️
                       </button>
                       <button
                         onClick={() => removeReference(ref.id)}
-                        className="text-xs text-[#555570] hover:text-red-400 p-1.5 rounded-lg hover:bg-[#1e1e30] transition-all"
+                        className="text-xs text-muted hover:text-red-500 p-1.5 rounded-lg hover:bg-gray-100 transition-all"
                         title="Remove"
                       >
                         🗑
@@ -1035,7 +939,7 @@ export default function ReferencingTool() {
         </div>
 
         {/* ── Footer ── */}
-        <p className="text-[11px] text-[#555570] font-mono text-center pb-8">
+        <p className="text-[11px] text-muted text-center pb-8">
           APA 7th edition · Data saved in your browser (localStorage)
         </p>
       </div>

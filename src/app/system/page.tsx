@@ -55,9 +55,9 @@ export default function SystemPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-dvh bg-[#0a0a0f] text-[#e8e8f0]">
+    <div className="min-h-dvh bg-surface text-fg">
       {/* Header */}
-      <header className="border-b border-[#1e1e30] px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 40 40" width="28" height="28" className="shrink-0">
@@ -72,21 +72,21 @@ export default function SystemPage() {
           <div className="hidden sm:flex items-center gap-4">
             <a
               href="/"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               Home
             </a>
             <a
               href="/school"
-              className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="text-xs text-secondary hover:text-fg transition-colors"
             >
               School
             </a>
-            <span className="text-xs text-[#a78bfa] font-mono border-b border-[#a78bfa]">
+            <span className="text-xs text-accent border-b border-accent">
               System
             </span>
             {stats && (
-              <span className="text-[11px] text-[#555570] font-mono whitespace-nowrap">
+              <span className="text-[11px] text-muted whitespace-nowrap">
                 Updated {new Date(stats.timestamp).toLocaleTimeString()}
               </span>
             )}
@@ -106,24 +106,24 @@ export default function SystemPage() {
 
         {/* Mobile nav dropdown */}
         {menuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-[#1e1e30] space-y-3">
+          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-3">
             <a
               href="/"
-              className="block text-sm text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="block text-sm text-secondary hover:text-fg transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               Home
             </a>
             <a
               href="/school"
-              className="block text-sm text-[#8888a0] hover:text-[#e8e8f0] transition-colors font-mono"
+              className="block text-sm text-secondary hover:text-fg transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               School
             </a>
-            <div className="text-sm text-[#a78bfa] font-mono">System</div>
+            <div className="text-sm text-accent">System</div>
             {stats && (
-              <div className="text-[11px] text-[#555570] font-mono">
+              <div className="text-[11px] text-muted">
                 Updated {new Date(stats.timestamp).toLocaleTimeString()}
               </div>
             )}
@@ -189,12 +189,12 @@ export default function SystemPage() {
           </SectionCard>
 
           <SectionCard title="◉ About">
-            <div className="text-sm sm:text-base text-[#8888a0] leading-relaxed space-y-3">
+            <div className="text-sm sm:text-base text-secondary leading-relaxed space-y-3">
               <p>
                 This dashboard displays real-time system statistics for the Hermes
                 server environment. Stats refresh automatically every 30 seconds.
               </p>
-              <p className="text-[11px] sm:text-xs text-[#555570] font-mono">
+              <p className="text-[11px] sm:text-xs text-muted">
                 Built with Next.js · Deployed via Vercel
               </p>
             </div>
@@ -203,7 +203,7 @@ export default function SystemPage() {
       </main>
 
       {error && (
-        <div className="fixed bottom-4 right-4 bg-[#f87171] text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] sm:max-w-sm">
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] sm:max-w-sm">
           ⚠️ {error}
         </div>
       )}
@@ -218,16 +218,16 @@ function StatCard({ label, value, sub, loading }: {
   loading: boolean;
 }) {
   return (
-    <div className="relative bg-[#16161f] border border-[#1e1e30] rounded-2xl p-4 sm:p-5 lg:p-6 overflow-hidden hover:border-[#2a2a40] transition-colors">
-      <div className="absolute top-0 left-0 w-[3px] h-full bg-[#a78bfa] opacity-60" />
-      <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-[#555570] font-mono mb-2 sm:mb-3">
+    <div className="relative bg-card card-shadow border border-line rounded-2xl p-4 sm:p-5 lg:p-6 overflow-hidden hover:border-gray-300 transition-colors">
+      <div className="absolute top-0 left-0 w-[3px] h-full bg-accent opacity-60" />
+      <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-muted mb-2 sm:mb-3">
         {label}
       </div>
-      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight ${loading ? 'animate-pulse text-[#555570]' : ''}`}>
+      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight ${loading ? 'animate-pulse text-muted' : ''}`}>
         {loading ? '...' : value}
       </div>
       {sub && (
-        <div className="text-xs sm:text-sm text-[#8888a0] mt-1.5 sm:mt-2 font-mono truncate">
+        <div className="text-xs sm:text-sm text-secondary mt-1.5 sm:mt-2 truncate">
           {sub}
         </div>
       )}
@@ -237,8 +237,8 @@ function StatCard({ label, value, sub, loading }: {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#16161f] border border-[#1e1e30] rounded-2xl p-5 sm:p-6 lg:p-7">
-      <h3 className="text-[11px] sm:text-xs uppercase tracking-widest text-[#a78bfa] font-mono mb-5 sm:mb-6">
+    <div className="bg-card card-shadow border border-line rounded-2xl p-5 sm:p-6 lg:p-7">
+      <h3 className="text-[11px] sm:text-xs uppercase tracking-widest text-accent mb-5 sm:mb-6">
         {title}
       </h3>
       <div className="space-y-0">
@@ -250,9 +250,9 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between py-2.5 sm:py-3 border-b border-[#1e1e30] last:border-0">
-      <span className="text-sm sm:text-base text-[#8888a0]">{label}</span>
-      <span className="text-sm sm:text-base font-mono text-[#e8e8f0] text-right ml-4 max-w-[55%] truncate">
+    <div className="flex justify-between py-2.5 sm:py-3 border-b border-line last:border-0">
+      <span className="text-sm sm:text-base text-secondary">{label}</span>
+      <span className="text-sm sm:text-base text-fg text-right ml-4 max-w-[55%] truncate">
         {value}
       </span>
     </div>
@@ -262,7 +262,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function ProgressBar({ percent }: { percent: number }) {
   const color = percent > 80 ? '#f87171' : percent > 60 ? '#fbbf24' : '#a78bfa';
   return (
-    <div className="w-full h-2.5 sm:h-3 bg-[#1a1a26] rounded-full overflow-hidden">
+    <div className="w-full h-2.5 sm:h-3 bg-gray-100 rounded-full overflow-hidden">
       <div
         className="h-full rounded-full transition-all duration-700 ease-out"
         style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: color }}
