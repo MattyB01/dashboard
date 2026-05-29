@@ -97,25 +97,28 @@ export default function SermonsPage() {
 
     setIsProcessing(true);
     setError('');
-    setProgressMsg('Uploading audio...');
+    setProgressMsg('Loading transcription model...');
 
     try {
-      // Step 1: Transcribe
-      const formData = new FormData();
-      formData.append('audio', audioFile);
+      // Step 1: Transcribe (client-side Whisper via Transformers.js — no API key needed)
+      const { pipeline } = await import('@xenova/transformers');
 
-      const transRes = await fetch('/api/sermons/transcribe', {
-        method: 'POST',
-        body: formData,
+      setProgressMsg('Transcribing audio...');
+
+      // Read audio file as Float32Array using Web Audio API
+      const arrayBuffer = await audioFile.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const channelData = audioBuffer.getChannelData(0); // mono
+
+      // Run Whisper
+      const transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      const result = await transcriber(channelData, {
+        language: 'english',
+        task: 'transcribe',
       });
 
-      if (!transRes.ok) {
-        const err = await transRes.json();
-        throw new Error(err.error || 'Transcription failed');
-      }
-
-      const transData = await transRes.json();
-      const transcript: string = transData.transcript;
+      const transcript: string = result.text;
 
       if (!transcript || transcript.trim().length < 10) {
         throw new Error('Transcription too short or empty');
