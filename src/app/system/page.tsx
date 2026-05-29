@@ -128,13 +128,6 @@ export default function SystemPage() {
               Faith
             </a>
             <a
-              href="/sermons"
-              className="block text-sm text-secondary hover:text-fg transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Sermons
-            </a>
-            <a
               href="/school"
               className="block text-sm text-secondary hover:text-fg transition-colors"
               onClick={() => setMenuOpen(false)}

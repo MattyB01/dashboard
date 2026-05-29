@@ -104,9 +104,6 @@ export default function Dashboard() {
           <button onClick={() => nav('/faith')} className="text-sm text-secondary hover:text-fg transition-colors">
             Faith
           </button>
-          <button onClick={() => nav('/sermons')} className="text-sm text-secondary hover:text-fg transition-colors">
-            Sermons
-          </button>
           <button onClick={() => nav('/school')} className="text-sm text-secondary hover:text-fg transition-colors">
             School
           </button>

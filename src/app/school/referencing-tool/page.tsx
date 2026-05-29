@@ -536,20 +536,30 @@ export default function ReferencingTool() {
   return (
     <main className="min-h-screen bg-surface text-fg flex flex-col">
       {/* Header */}
-      <header className="border-b border-line px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
-            ← School
-          </a>
-          <span className="text-xs text-accent border-b border-accent">
+      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
+              ← School
+            </a>
+            <a href="/" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
+              Home
+            </a>
+            <a href="/faith" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
+              Faith
+            </a>
+            <a href="/system" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
+              System
+            </a>
+            <span className="text-xs text-accent border-b border-accent hidden sm:inline">
+              Referencing Tool
+            </span>
+          </div>
+
+          {/* Mobile: active page indicator */}
+          <span className="text-xs text-accent border-b border-accent sm:hidden">
             Referencing Tool
           </span>
-          <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">
-            Home
-          </a>
-          <a href="/system" className="text-xs text-secondary hover:text-fg transition-colors">
-            System
-          </a>
         </div>
       </header>
 

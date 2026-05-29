@@ -663,6 +663,10 @@ export default function SermonsPage() {
       <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <a href="/faith" className="text-xs text-secondary hover:text-fg transition-colors shrink-0">
+              ← Faith
+            </a>
+            <span className="w-px h-4 bg-line shrink-0"></span>
             <svg viewBox="0 0 40 40" width="24" height="24" className="shrink-0">
               <rect x="10" y="6" width="20" height="28" rx="3" fill="none" stroke="#7c3aed" strokeWidth="2.5" />
               <circle cx="20" cy="20" r="4" fill="none" stroke="#7c3aed" strokeWidth="2" />

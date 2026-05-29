@@ -396,11 +396,17 @@ export default function MathsTestGenerator() {
 
   return (
     <main className="min-h-screen bg-surface text-fg flex flex-col">
-      <header className="border-b border-line px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <a href="/" className="text-xs text-secondary break-words hover:text-fg transition-colors">Home</a>
-          <a href="/school" className="text-xs text-secondary break-words hover:text-fg transition-colors">School</a>
-          <span className="text-xs text-accent border-b border-accent">Maths Test Generator</span>
+      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">Home</a>
+            <a href="/faith" className="text-xs text-secondary hover:text-fg transition-colors">Faith</a>
+            <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">School</a>
+            <span className="text-xs text-accent border-b border-accent hidden sm:inline">Maths Test Generator</span>
+          </div>
+
+          {/* Desktop active label */}
+          <span className="text-xs text-accent border-b border-accent sm:hidden">Maths Test Generator</span>
         </div>
       </header>
 

@@ -58,9 +58,6 @@ export default function FaithPage() {
             <a href="/school" className="text-sm text-secondary hover:text-fg transition-colors">
               School
             </a>
-            <a href="/sermons" className="text-sm text-secondary hover:text-fg transition-colors">
-              Sermons
-            </a>
             <a href="/system" className="text-sm text-secondary hover:text-fg transition-colors">
               System
             </a>

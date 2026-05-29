@@ -50,9 +50,6 @@ export default function SchoolPage() {
             <a href="/faith" className="text-sm text-secondary hover:text-fg transition-colors">
               Faith
             </a>
-            <a href="/sermons" className="text-sm text-secondary hover:text-fg transition-colors">
-              Sermons
-            </a>
             <span className="text-sm text-accent">School</span>
             <a href="/system" className="text-sm text-secondary hover:text-fg transition-colors">
               System
