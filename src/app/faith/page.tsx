@@ -1,16 +1,28 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
 
-export default function SchoolPage() {
-  const [stats, setStats] = useState<any>(null);
+interface Verse {
+  verse: string;
+  reference: string;
+  version: string;
+}
+
+export default function FaithPage() {
+  const [verse, setVerse] = useState<Verse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetch("/api/system")
+    setMounted(true);
+    fetch('/api/bible')
       .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {});
+      .then(setVerse)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  if (!mounted) return null;
 
   return (
     <main className="min-h-screen bg-surface text-fg flex flex-col">
@@ -20,20 +32,15 @@ export default function SchoolPage() {
           <a href="/" className="text-xs text-secondary hover:text-fg transition-colors">
             Home
           </a>
-          <a href="/faith" className="text-xs text-secondary hover:text-fg transition-colors">
-            Faith
-          </a>
           <span className="text-xs text-accent border-b border-accent">
-            School
+            Faith
           </span>
+          <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
+            School
+          </a>
           <a href="/system" className="text-xs text-secondary hover:text-fg transition-colors">
             System
           </a>
-          {stats && (
-            <span className="text-[11px] text-muted whitespace-nowrap hidden sm:inline">
-              Updated {new Date(stats.timestamp).toLocaleTimeString()}
-            </span>
-          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -47,13 +54,13 @@ export default function SchoolPage() {
             <a href="/" className="text-sm text-secondary hover:text-fg transition-colors">
               Home
             </a>
-            <a href="/faith" className="text-sm text-secondary hover:text-fg transition-colors">
-              Faith
+            <span className="text-sm text-accent">Faith</span>
+            <a href="/school" className="text-sm text-secondary hover:text-fg transition-colors">
+              School
             </a>
             <a href="/sermons" className="text-sm text-secondary hover:text-fg transition-colors">
               Sermons
             </a>
-            <span className="text-sm text-accent">School</span>
             <a href="/system" className="text-sm text-secondary hover:text-fg transition-colors">
               System
             </a>
@@ -65,41 +72,43 @@ export default function SchoolPage() {
       <div className="flex-1 px-6 py-12 max-w-4xl mx-auto w-full">
         <div className="mb-8">
           <h1 className="text-2xl text-fg mb-2 font-bold tracking-tight">
-            <span className="text-accent">✦</span> School
+            <span className="text-accent">✝</span> Faith
           </h1>
           <p className="text-sm text-secondary">
-            Tools and resources for your studies
+            Spiritual growth &amp; resources
           </p>
         </div>
 
-        {/* Cards */}
+        {/* Verse of the Day card */}
+        {verse && (
+          <div className="bg-card border border-line rounded-2xl p-6 sm:p-8 mb-6 card-shadow">
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-accent mb-4">
+              ✦ Verse of the Day
+            </div>
+            <p className="text-base sm:text-lg text-fg leading-relaxed italic font-light">
+              &ldquo;{verse.verse}&rdquo;
+            </p>
+            <div className="mt-4 pt-4 border-t border-line">
+              <p className="text-sm text-accent">{verse.reference}</p>
+              <p className="text-[11px] text-muted mt-1">{verse.version}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Cards grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           <a
-            href="/school/maths-test-generator"
+            href="/sermons"
             className="group bg-card border border-line rounded-2xl p-6 hover:border-accent/50 transition-all hover:shadow-md card-shadow"
           >
             <div className="w-12 h-12 rounded-xl bg-accent-light flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
-              <span className="text-xl text-accent">∫</span>
+              <span className="text-xl text-accent">📖</span>
             </div>
             <h2 className="text-lg text-fg mb-2 group-hover:text-accent transition-colors font-semibold tracking-tight">
-              Maths Test Generator
+              Sermon Notes
             </h2>
             <p className="text-sm text-secondary leading-relaxed break-words">
-              Generate SACE Stage 2 Maths Methods practice tests with worked solutions. Pick your topics.
-            </p>
-          </a>
-          <a
-            href="/school/referencing-tool"
-            className="group bg-card border border-line rounded-2xl p-6 hover:border-accent/50 transition-all hover:shadow-md card-shadow"
-          >
-            <div className="w-12 h-12 rounded-xl bg-accent-light flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
-              <span className="text-xl text-accent">📚</span>
-            </div>
-            <h2 className="text-lg text-fg mb-2 group-hover:text-accent transition-colors font-semibold tracking-tight">
-              Referencing Tool
-            </h2>
-            <p className="text-sm text-secondary leading-relaxed break-words">
-              Build APA 7th edition reference lists. Auto-fill from URLs, bulk import, save lists for later.
+              Upload sermon audio, get AI-powered transcriptions, structured notes, Bible verses, and key takeaways.
             </p>
           </a>
         </div>

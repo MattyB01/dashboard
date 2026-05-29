@@ -58,10 +58,10 @@ export default function Dashboard() {
           {/* Desktop nav */}
           <div className="hidden sm:flex items-center gap-2 sm:gap-4">
             <a
-              href="/sermons"
+              href="/faith"
               className="text-xs text-secondary hover:text-fg transition-colors"
             >
-              Sermons
+              Faith
             </a>
             <a
               href="/school"
@@ -100,7 +100,10 @@ export default function Dashboard() {
 
       {/* Mobile menu dropdown */}
       {menuOpen && (
-        <div className="sm:hidden border-b border-line bg-card px-4 py-3 flex gap-4">
+        <div className="sm:hidden border-b border-line bg-card px-4 py-3 flex gap-4 flex-wrap">
+          <button onClick={() => nav('/faith')} className="text-sm text-secondary hover:text-fg transition-colors">
+            Faith
+          </button>
           <button onClick={() => nav('/sermons')} className="text-sm text-secondary hover:text-fg transition-colors">
             Sermons
           </button>

@@ -77,6 +77,12 @@ export default function SystemPage() {
               Home
             </a>
             <a
+              href="/faith"
+              className="text-xs text-secondary hover:text-fg transition-colors"
+            >
+              Faith
+            </a>
+            <a
               href="/school"
               className="text-xs text-secondary hover:text-fg transition-colors"
             >
@@ -113,6 +119,20 @@ export default function SystemPage() {
               onClick={() => setMenuOpen(false)}
             >
               Home
+            </a>
+            <a
+              href="/faith"
+              className="block text-sm text-secondary hover:text-fg transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Faith
+            </a>
+            <a
+              href="/sermons"
+              className="block text-sm text-secondary hover:text-fg transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Sermons
             </a>
             <a
               href="/school"
