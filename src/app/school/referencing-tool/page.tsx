@@ -538,28 +538,15 @@ export default function ReferencingTool() {
       {/* Header */}
       <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <a href="/school" className="text-xs text-secondary hover:text-fg transition-colors">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a href="/school" className="text-sm text-secondary hover:text-fg transition-colors">
               ← School
             </a>
-            <a href="/" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
-              Home
-            </a>
-            <a href="/faith" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
-              Faith
-            </a>
-            <a href="/system" className="text-xs text-secondary hover:text-fg transition-colors hidden sm:inline">
-              System
-            </a>
-            <span className="text-xs text-accent border-b border-accent hidden sm:inline">
-              Referencing Tool
+            <span className="text-muted text-xs">/</span>
+            <span className="text-sm text-accent font-medium border-b-2 border-accent/40 pb-0.5" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
+              Referencing
             </span>
           </div>
-
-          {/* Mobile: active page indicator */}
-          <span className="text-xs text-accent border-b border-accent sm:hidden">
-            Referencing Tool
-          </span>
         </div>
       </header>
 

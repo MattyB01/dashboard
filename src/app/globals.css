@@ -1,17 +1,20 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
 @theme {
-  --font-sans: 'Manrope', system-ui, sans-serif;
-  --color-surface: #f5f6f8;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+
+  --color-surface: #f5f3ee;
   --color-card: #ffffff;
-  --color-input: #f9fafb;
-  --color-line: #e8ecf1;
-  --color-fg: #1a1a2e;
-  --color-secondary: #6b7280;
-  --color-muted: #9ca3af;
-  --color-accent: #7c3aed;
-  --color-accent-light: #f5f3ff;
+  --color-input: #fcfbf9;
+  --color-line: #e4ddcf;
+  --color-fg: #1c1917;
+  --color-secondary: #78716c;
+  --color-muted: #a6a099;
+  --color-accent: #c4563d;
+  --color-accent-light: #fdf1ed;
+  --color-accent-dark: #9a3b2a;
 }
 
 html {
@@ -21,7 +24,7 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
 
 /* Better touch targets on mobile */
@@ -31,7 +34,31 @@ body {
   }
 }
 
-/* Utility: light theme card shadows */
+/* Utility: warm-toned card shadows */
 .card-shadow {
-  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 3px 0 rgba(28, 25, 23, 0.04), 0 1px 2px -1px rgba(28, 25, 23, 0.03);
 }
+
+.card-shadow-lg {
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.04);
+}
+
+/* Stagger entrance animation */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+.fade-delay-1 { animation-delay: 0.05s; }
+.fade-delay-2 { animation-delay: 0.1s; }
+.fade-delay-3 { animation-delay: 0.15s; }
+.fade-delay-4 { animation-delay: 0.2s; }
+.fade-delay-5 { animation-delay: 0.25s; }

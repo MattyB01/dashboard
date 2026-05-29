@@ -19,7 +19,6 @@ export default function Dashboard() {
     fetchVerse();
   }, []);
 
-  // Close menu on navigation
   const nav = (href: string) => {
     setMenuOpen(false);
     window.location.href = href;
@@ -48,31 +47,25 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 40 40" width="28" height="28" className="shrink-0">
-              <circle cx="20" cy="20" r="18" fill="none" stroke="#a78bfa" strokeWidth="2.5" />
-              <path d="M12 28 L20 10 L28 28" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M15 22 L25 22" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" />
+              <rect x="8" y="6" width="24" height="28" rx="4" fill="none" stroke="#c4563d" strokeWidth="2.5" />
+              <path d="M14 14 L26 14" stroke="#c4563d" strokeWidth="2" strokeLinecap="round" />
+              <path d="M14 19 L26 19" stroke="#c4563d" strokeWidth="2" strokeLinecap="round" />
+              <path d="M14 24 L22 24" stroke="#c4563d" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="text-lg sm:text-xl font-semibold tracking-tight">Hermes Dashboard</span>
+            <span className="text-lg sm:text-xl font-semibold tracking-tight" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
+              Hermes
+            </span>
           </div>
 
           {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-2 sm:gap-4">
-            <a
-              href="/faith"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
+          <div className="hidden sm:flex items-center gap-1">
+            <a href="/faith" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
               Faith
             </a>
-            <a
-              href="/school"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
+            <a href="/school" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
               School
             </a>
-            <a
-              href="/system"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
+            <a href="/system" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
               System
             </a>
           </div>
@@ -100,47 +93,44 @@ export default function Dashboard() {
 
       {/* Mobile menu dropdown */}
       {menuOpen && (
-        <div className="sm:hidden border-b border-line bg-card px-4 py-3 flex gap-4 flex-wrap">
-          <button onClick={() => nav('/faith')} className="text-sm text-secondary hover:text-fg transition-colors">
+        <div className="sm:hidden border-b border-line bg-card px-4 py-3 flex gap-3 flex-wrap">
+          <button onClick={() => nav('/faith')} className="text-sm text-secondary hover:text-fg transition-colors font-medium">
             Faith
           </button>
-          <button onClick={() => nav('/school')} className="text-sm text-secondary hover:text-fg transition-colors">
+          <button onClick={() => nav('/school')} className="text-sm text-secondary hover:text-fg transition-colors font-medium">
             School
           </button>
-          <button onClick={() => nav('/system')} className="text-sm text-secondary hover:text-fg transition-colors">
+          <button onClick={() => nav('/system')} className="text-sm text-secondary hover:text-fg transition-colors font-medium">
             System
           </button>
         </div>
       )}
 
       {/* Verse of the Day — centered */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-        <div className="w-full max-w-2xl mx-auto text-center">
-          <div className="bg-card card-shadow border border-line rounded-2xl p-8 sm:p-10 lg:p-12">
-            <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-accent mb-6 sm:mb-8">
-              ✦ Verse of the Day
-            </div>
-
-            {loading ? (
-              <div className="text-muted text-base animate-pulse">Loading...</div>
-            ) : verse ? (
-              <>
-                <p className="text-lg sm:text-xl lg:text-2xl text-fg leading-relaxed italic font-light break-words">
-                  &ldquo;{verse.verse}&rdquo;
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="w-full max-w-xl mx-auto text-center animate-fade-up fade-delay-1">
+          {loading ? (
+            <div className="text-muted text-base animate-pulse">Loading...</div>
+          ) : verse ? (
+            <>
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.15em] text-accent mb-6 sm:mb-8 font-medium">
+                Verse of the Day
+              </div>
+              <p className="text-2xl sm:text-3xl lg:text-4xl text-fg leading-[1.3] italic font-light" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
+                &ldquo;{verse.verse}&rdquo;
+              </p>
+              <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-line">
+                <p className="text-sm sm:text-base text-accent font-medium">
+                  {verse.reference}
                 </p>
-                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-line break-words">
-                  <p className="text-sm sm:text-base text-accent">
-                    {verse.reference}
-                  </p>
-                  <p className="text-[11px] text-muted mt-1">
-                    {verse.version}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted">Verse unavailable</p>
-            )}
-          </div>
+                <p className="text-xs text-muted mt-1.5">
+                  {verse.version}
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">Verse unavailable</p>
+          )}
         </div>
       </main>
     </div>

@@ -9,18 +9,8 @@ interface SystemStats {
   arch: string;
   nodeVersion: string;
   uptime: string;
-  cpu: {
-    model: string;
-    cores: number;
-    usagePercent: number;
-    loadAverage: number[];
-  };
-  memory: {
-    totalGb: number;
-    usedGb: number;
-    freeGb: number;
-    usagePercent: number;
-  };
+  cpu: { model: string; cores: number; usagePercent: number; loadAverage: number[]; };
+  memory: { totalGb: number; usedGb: number; freeGb: number; usagePercent: number; };
   timestamp: string;
 }
 
@@ -55,45 +45,32 @@ export default function SystemPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-dvh bg-surface text-fg">
+    <div className="min-h-dvh bg-surface text-fg flex flex-col">
       {/* Header */}
       <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
-            <svg viewBox="0 0 40 40" width="28" height="28" className="shrink-0">
-              <circle cx="20" cy="20" r="18" fill="none" stroke="#a78bfa" strokeWidth="2.5" />
-              <path d="M12 28 L20 10 L28 28" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M15 22 L25 22" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="text-lg sm:text-xl font-semibold tracking-tight">Hermes Dashboard</span>
+            <a href="/" className="text-sm text-secondary hover:text-fg transition-colors">
+              Home
+            </a>
+            <span className="text-muted text-xs">/</span>
+            <span className="text-sm text-accent font-medium border-b-2 border-accent/40 pb-0.5" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
+              System
+            </span>
           </div>
 
           {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-4">
-            <a
-              href="/"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
-              Home
-            </a>
-            <a
-              href="/faith"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
+          <div className="hidden sm:flex items-center gap-1">
+            <a href="/faith" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
               Faith
             </a>
-            <a
-              href="/school"
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
+            <a href="/school" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
               School
             </a>
-            <span className="text-xs text-accent border-b border-accent">
-              System
-            </span>
+            <span className="px-3 py-1.5 text-sm text-accent font-medium">System</span>
             {stats && (
-              <span className="text-[11px] text-muted whitespace-nowrap">
-                Updated {new Date(stats.timestamp).toLocaleTimeString()}
+              <span className="text-xs text-muted ml-2">
+                updated {new Date(stats.timestamp).toLocaleTimeString()}
               </span>
             )}
           </div>
@@ -101,185 +78,103 @@ export default function SystemPage() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="sm:hidden flex flex-col gap-1 p-2"
+            className="sm:hidden p-2 text-secondary hover:text-fg transition-colors rounded-lg hover:bg-card"
             aria-label="Toggle menu"
           >
-            <span className={`block w-5 h-[1.5px] bg-muted transition-transform ${menuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-muted transition-opacity ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block w-5 h-[1.5px] bg-muted transition-transform ${menuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {menuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
           </button>
         </div>
 
         {/* Mobile nav dropdown */}
         {menuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-3 break-words">
-            <a
-              href="/"
-              className="block text-sm text-secondary hover:text-fg transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Home
-            </a>
-            <a
-              href="/faith"
-              className="block text-sm text-secondary hover:text-fg transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Faith
-            </a>
-            <a
-              href="/school"
-              className="block text-sm text-secondary hover:text-fg transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              School
-            </a>
-            <div className="text-sm text-accent">System</div>
+          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-1">
+            <a href="/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">Home</a>
+            <a href="/faith" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">Faith</a>
+            <a href="/school" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">School</a>
+            <div className="px-3 py-2 text-sm text-accent font-medium">System</div>
             {stats && (
-              <div className="text-[11px] text-muted">
-                Updated {new Date(stats.timestamp).toLocaleTimeString()}
-              </div>
+              <div className="px-3 text-xs text-muted">updated {new Date(stats.timestamp).toLocaleTimeString()}</div>
             )}
           </div>
         )}
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        {/* Stat Cards — responsive grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 sm:gap-4 lg:gap-5 mb-8 sm:mb-10 lg:mb-12">
-          <StatCard
-            label="CPU Usage"
-            value={stats ? `${stats.cpu.usagePercent}%` : '—'}
-            sub={stats ? `${stats.cpu.cores} cores` : undefined}
-            loading={loading}
-          />
-          <StatCard
-            label="Memory"
-            value={stats ? `${stats.memory.usagePercent}%` : '—'}
-            sub={stats ? `${stats.memory.freeGb} GB free` : undefined}
-            loading={loading}
-          />
-          <StatCard
-            label="Uptime"
-            value={stats ? stats.uptime : '—'}
-            sub={stats?.hostname}
-            loading={loading}
-          />
-          <StatCard
-            label="Platform"
-            value={stats ? `${stats.platform} ${stats.arch}` : '—'}
-            sub={stats?.release}
-            loading={loading}
-          />
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 max-w-5xl mx-auto w-full animate-fade-up fade-delay-1">
+        <div className="mb-8 sm:mb-10">
+          <h1 className="text-3xl sm:text-4xl text-fg mb-2 font-normal leading-tight" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
+            System
+          </h1>
+          <p className="text-sm text-secondary">
+            Server status and metrics
+          </p>
         </div>
 
-        {/* Detail Sections */}
-        <div className="grid md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
-          <SectionCard title="◆ Processor">
-            <Row label="Model" value={stats?.cpu.model ?? '—'} />
-            <Row label="Usage" value={stats ? `${stats.cpu.usagePercent}%` : '—'} />
-            {stats && <div className="pt-1 pb-3"><ProgressBar percent={stats.cpu.usagePercent} /></div>}
-            <Row label="Cores" value={stats?.cpu.cores?.toString() ?? '—'} />
-            <Row label="Load (1m)" value={stats ? stats.cpu.loadAverage[0].toFixed(2) : '—'} />
-            <Row label="Load (5m)" value={stats ? stats.cpu.loadAverage[1].toFixed(2) : '—'} />
-            <Row label="Load (15m)" value={stats ? stats.cpu.loadAverage[2].toFixed(2) : '—'} />
-          </SectionCard>
-
-          <SectionCard title="◈ Memory">
-            <Row label="Usage" value={stats ? `${stats.memory.usagePercent}%` : '—'} />
-            {stats && <div className="pt-1 pb-3"><ProgressBar percent={stats.memory.usagePercent} /></div>}
-            <Row label="Total" value={stats ? `${stats.memory.totalGb} GB` : '—'} />
-            <Row label="Used" value={stats ? `${stats.memory.usedGb} GB` : '—'} />
-            <Row label="Free" value={stats ? `${stats.memory.freeGb} GB` : '—'} />
-          </SectionCard>
-
-          <SectionCard title="⊘ System">
-            <Row label="Hostname" value={stats?.hostname ?? '—'} />
-            <Row label="OS" value={stats ? `${stats.platform} ${stats.arch}` : '—'} />
-            <Row label="Kernel" value={stats?.release ?? '—'} />
-            <Row label="Node.js" value={stats?.nodeVersion ?? '—'} />
-            <Row label="Uptime" value={stats?.uptime ?? '—'} />
-          </SectionCard>
-
-          <SectionCard title="◉ About">
-            <div className="text-sm sm:text-base text-secondary leading-relaxed space-y-3 break-words break-words">
-              <p>
-                This dashboard displays real-time system statistics for the Hermes
-                server environment. Stats refresh automatically every 30 seconds.
-              </p>
-              <p className="text-[11px] sm:text-xs text-muted">
-                Built with Next.js · Deployed via Vercel
-              </p>
+        {loading ? (
+          <div className="text-sm text-muted animate-pulse">Loading system data...</div>
+        ) : error ? (
+          <div className="text-sm text-red-500">{error}</div>
+        ) : stats ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-up fade-delay-2">
+            {/* Host */}
+            <div className="bg-card border border-line rounded-2xl p-5 sm:p-6 card-shadow">
+              <div className="text-[10px] uppercase tracking-[0.15em] text-muted mb-3 font-medium">Host</div>
+              <div className="text-sm text-fg font-medium">{stats.hostname}</div>
+              <div className="text-xs text-secondary mt-1">{stats.platform} {stats.release}</div>
+              <div className="text-xs text-secondary">{stats.arch}</div>
             </div>
-          </SectionCard>
-        </div>
-      </main>
 
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-xl text-sm shadow-2xl max-w-[90vw] break-words sm:max-w-sm">
-          ⚠️ {error}
-        </div>
-      )}
-    </div>
-  );
-}
+            {/* CPU */}
+            <div className="bg-card border border-line rounded-2xl p-5 sm:p-6 card-shadow">
+              <div className="text-[10px] uppercase tracking-[0.15em] text-muted mb-3 font-medium">CPU</div>
+              <div className="text-sm text-fg font-medium">{stats.cpu.model}</div>
+              <div className="text-xs text-secondary mt-1">{stats.cpu.cores} cores</div>
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-secondary">Usage</span>
+                  <span className={stats.cpu.usagePercent > 80 ? 'text-accent font-medium' : 'text-fg'}>{stats.cpu.usagePercent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-line rounded-full overflow-hidden">
+                  <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(stats.cpu.usagePercent, 100)}%` }} />
+                </div>
+              </div>
+            </div>
 
-function StatCard({ label, value, sub, loading }: {
-  label: string;
-  value: string;
-  sub?: string;
-  loading: boolean;
-}) {
-  return (
-    <div className="relative bg-card card-shadow border border-line rounded-2xl p-4 sm:p-5 lg:p-6 overflow-hidden hover:border-gray-300 transition-colors">
-      <div className="absolute top-0 left-0 w-[3px] h-full bg-accent opacity-60" />
-      <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-muted mb-2 sm:mb-3">
-        {label}
+            {/* Memory */}
+            <div className="bg-card border border-line rounded-2xl p-5 sm:p-6 card-shadow">
+              <div className="text-[10px] uppercase tracking-[0.15em] text-muted mb-3 font-medium">Memory</div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg text-fg font-medium" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>{stats.memory.usedGb.toFixed(1)}</span>
+                <span className="text-xs text-secondary">/ {stats.memory.totalGb.toFixed(1)} GB</span>
+              </div>
+              <div className="text-xs text-secondary mt-0.5">{stats.memory.freeGb.toFixed(1)} GB free</div>
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-secondary">Usage</span>
+                  <span className={stats.memory.usagePercent > 85 ? 'text-accent font-medium' : 'text-fg'}>{stats.memory.usagePercent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-line rounded-full overflow-hidden">
+                  <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(stats.memory.usagePercent, 100)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Node */}
+            <div className="bg-card border border-line rounded-2xl p-5 sm:p-6 card-shadow">
+              <div className="text-[10px] uppercase tracking-[0.15em] text-muted mb-3 font-medium">Runtime</div>
+              <div className="text-sm text-fg font-medium">Node.js {stats.nodeVersion}</div>
+              <div className="text-xs text-secondary mt-1">Uptime: {stats.uptime}</div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">No data</p>
+        )}
       </div>
-      <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight break-all ${loading ? 'animate-pulse text-muted' : ''}`}>
-        {loading ? '...' : value}
-      </div>
-      {sub && (
-        <div className="text-xs sm:text-sm text-secondary mt-1.5 sm:mt-2 truncate">
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-card card-shadow border border-line rounded-2xl p-5 sm:p-6 lg:p-7">
-      <h3 className="text-[11px] sm:text-xs uppercase tracking-widest text-accent mb-5 sm:mb-6">
-        {title}
-      </h3>
-      <div className="space-y-0">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between py-2.5 sm:py-3 border-b border-line last:border-0">
-      <span className="text-sm sm:text-base text-secondary">{label}</span>
-      <span className="text-sm sm:text-base text-fg text-right ml-4 max-w-[55%] truncate">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ProgressBar({ percent }: { percent: number }) {
-  const color = percent > 80 ? '#f87171' : percent > 60 ? '#fbbf24' : '#a78bfa';
-  return (
-    <div className="w-full h-2.5 sm:h-3 bg-gray-100 rounded-full overflow-hidden">
-      <div
-        className="h-full rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: color }}
-      />
     </div>
   );
 }
