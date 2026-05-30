@@ -1,13 +1,4 @@
 {
-  "name": "dashboard",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
   "dependencies": {
     "katex": "^0.17.0",
     "next": "^16.2.6",
@@ -24,5 +15,14 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"
-  }
+  },
+  "name": "dashboard",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "eslint",
+    "start": "next start"
+  },
+  "version": "0.1.0"
 }
