@@ -172,6 +172,7 @@ export default function SermonsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [progressMsg, setProgressMsg] = useState('');
   const processingRef = useRef(false);
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
   // Filter / sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,6 +204,13 @@ export default function SermonsPage() {
     processingRef.current = true;
 
     try {
+      // Decode audio during user gesture (required by mobile browsers)
+      setProgressMsg('Reading audio file...');
+      const arrayBuffer = await audioFile.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+      audioBufferRef.current = decoded;
+
       // Create entry immediately with processing status
       const entryId = crypto.randomUUID?.() || Date.now().toString(36);
       const entry: SermonEntry = {
@@ -232,8 +240,8 @@ export default function SermonsPage() {
       setIsProcessing(false);
       setProgressMsg('');
 
-      // Fire off background processing
-      processInBackground(entryId, audioFile, finalTitle);
+      // Fire off background processing with pre-decoded buffer
+      processInBackground(entryId, decoded, audioCtx, finalTitle);
     } catch (err: any) {
       setError(err.message || 'Failed to start processing');
       setIsProcessing(false);
@@ -244,16 +252,13 @@ export default function SermonsPage() {
 
   async function processInBackground(
     entryId: string,
-    file: File,
+    audioBuffer: AudioBuffer,
+    audioCtx: AudioContext,
     sermonTitle: string,
   ) {
     try {
-      // Step 1: Decode audio and split into chunks
+      // Step 1: Split into chunks
       updateSermon(entryId, { progressMsg: 'Processing audio...' });
-      const arrayBuffer = await file.arrayBuffer();
-      const audioCtx = new AudioContext();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
       const chunks = await audioBufferToWav16kMono(audioBuffer);
       audioCtx.close();
 
