@@ -507,21 +507,38 @@ export default function SermonsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sorted.map(sermon => (
-              <button
+              <div
                 key={sermon.id}
-                onClick={() => {
-                  if (sermon.status === 'processing') return;
-                  setSelectedId(sermon.id);
-                  setView('detail');
-                }}
-                className={`text-left bg-card border rounded-2xl p-4 sm:p-5 card-shadow transition-all group ${
+                className={`relative bg-card border rounded-2xl card-shadow transition-all group ${
                   sermon.status === 'processing'
-                    ? 'border-accent/30 opacity-70 cursor-default'
+                    ? 'border-accent/30 opacity-70'
                     : sermon.status === 'error'
-                    ? 'border-rose-200 hover:border-rose-400 hover:shadow-md'
+                    ? 'border-rose-200'
                     : 'border-line hover:shadow-md hover:border-accent/30'
                 }`}
               >
+                {/* Delete button — top right */}
+                <button
+                  onClick={() => handleDelete(sermon.id)}
+                  className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                  aria-label="Delete sermon"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                {/* Card body */}
+                <button
+                  onClick={() => {
+                    if (sermon.status === 'processing') return;
+                    setSelectedId(sermon.id);
+                    setView('detail');
+                  }}
+                  className={`text-left w-full p-4 sm:p-5 ${
+                    sermon.status === 'processing' ? 'cursor-default' : 'cursor-pointer'
+                  }`}
+                >
                 {/* Date badge + status */}
                 <div className="flex items-center gap-2 mb-3">
                   {sermon.status === 'processing' ? (
@@ -590,6 +607,7 @@ export default function SermonsPage() {
                   </div>
                 )}
               </button>
+            </div>
             ))}
           </div>
         )}
