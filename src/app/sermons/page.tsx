@@ -151,7 +151,15 @@ function audioBufferToWav16kMono(buffer: AudioBuffer): Promise<Blob[]> {
 
   while (srcOffset < srcLen) {
     const pcm = resampleSegment(srcOffset, srcSamplesPerChunk);
-    chunks.push(pcmToWav(pcm));
+
+    // Skip silent chunks (Whisper hallucinates on silence)
+    let sumSq = 0;
+    for (let i = 0; i < pcm.length; i++) sumSq += pcm[i] * pcm[i];
+    const rms = Math.sqrt(sumSq / pcm.length);
+    if (rms > 0.01) {
+      chunks.push(pcmToWav(pcm));
+    }
+
     srcOffset += srcSamplesPerChunk;
   }
 
