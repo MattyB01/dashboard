@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import SiteHeader from '@/components/SiteHeader';
 
 interface SystemStats {
   hostname: string;
@@ -19,7 +20,6 @@ export default function SystemPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -46,64 +46,7 @@ export default function SystemPage() {
 
   return (
     <div className="min-h-dvh bg-surface text-fg flex flex-col">
-      {/* Header */}
-      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <a href="/" className="text-sm text-secondary hover:text-fg transition-colors">
-              Home
-            </a>
-            <span className="text-muted text-xs">/</span>
-            <span className="text-sm text-accent font-medium border-b-2 border-accent/40 pb-0.5" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-              System
-            </span>
-          </div>
-
-          {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-1">
-            <a href="/faith" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
-              Faith
-            </a>
-            <a href="/school" className="px-3 py-1.5 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-all">
-              School
-            </a>
-            <span className="px-3 py-1.5 text-sm text-accent font-medium">System</span>
-            {stats && (
-              <span className="text-xs text-muted ml-2">
-                updated {new Date(stats.timestamp).toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="sm:hidden p-2 text-secondary hover:text-fg transition-colors rounded-lg hover:bg-card"
-            aria-label="Toggle menu"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile nav dropdown */}
-        {menuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-line space-y-1">
-            <a href="/" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">Home</a>
-            <a href="/faith" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">Faith</a>
-            <a href="/school" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-secondary hover:text-fg hover:bg-card rounded-lg transition-colors">School</a>
-            <div className="px-3 py-2 text-sm text-accent font-medium">System</div>
-            {stats && (
-              <div className="px-3 text-xs text-muted">updated {new Date(stats.timestamp).toLocaleTimeString()}</div>
-            )}
-          </div>
-        )}
-      </header>
+      <SiteHeader currentPage="system" />
 
       <div className="flex-1 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 max-w-5xl mx-auto w-full animate-fade-up fade-delay-1">
         <div className="mb-8 sm:mb-10">
@@ -113,6 +56,11 @@ export default function SystemPage() {
           <p className="text-sm text-secondary">
             Server status and metrics
           </p>
+          {stats && (
+            <span className="text-xs text-muted mt-1 inline-block">
+              updated {new Date(stats.timestamp).toLocaleTimeString()}
+            </span>
+          )}
         </div>
 
         {loading ? (

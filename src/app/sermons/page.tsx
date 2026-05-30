@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import SiteHeader from '@/components/SiteHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -659,32 +660,7 @@ export default function SermonsPage() {
 
   return (
     <div className="min-h-dvh bg-surface text-fg flex flex-col">
-      {/* Minimal header */}
-      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/faith" className="text-sm text-secondary hover:text-fg transition-colors shrink-0">
-              ← Faith
-            </a>
-            <span className="w-px h-4 bg-line shrink-0"></span>
-            <svg viewBox="0 0 40 40" width="22" height="22" className="shrink-0">
-              <rect x="10" y="6" width="20" height="28" rx="3" fill="none" stroke="#c4563d" strokeWidth="2.5" />
-              <circle cx="20" cy="20" r="4" fill="none" stroke="#c4563d" strokeWidth="2" />
-              <path d="M16 12 L24 12" stroke="#c4563d" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M16 28 L24 28" stroke="#c4563d" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <span className="text-base font-medium tracking-tight" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>Sermon Notes</span>
-          </div>
-          {view !== 'library' && (
-            <button
-              onClick={() => setView('library')}
-              className="text-xs text-secondary hover:text-fg transition-colors"
-            >
-              Library
-            </button>
-          )}
-        </div>
-      </header>
+      <SiteHeader currentPage="faith" />
 
       {/* Content */}
       {view === 'library' && renderLibrary()}

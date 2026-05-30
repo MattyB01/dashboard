@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SiteHeader from "@/components/SiteHeader";
 import "katex/dist/katex.min.css";
 import katex from "katex";
 
@@ -396,17 +397,7 @@ export default function MathsTestGenerator() {
 
   return (
     <main className="min-h-screen bg-surface text-fg flex flex-col">
-      <header className="border-b border-line px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <a href="/" className="text-sm text-secondary hover:text-fg transition-colors">Home</a>
-            <span className="text-muted text-xs">/</span>
-            <a href="/school" className="text-sm text-secondary hover:text-fg transition-colors">School</a>
-            <span className="text-muted text-xs">/</span>
-            <span className="text-sm text-accent font-medium border-b-2 border-accent/40 pb-0.5" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>Maths Test</span>
-          </div>
-        </div>
-      </header>
+      <SiteHeader currentPage="school" />
 
       <div className="flex-1 px-6 py-8 max-w-4xl mx-auto w-full">
         {phase === "form" && (

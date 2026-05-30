@@ -1,7 +1,7 @@
 /**
  * POST /api/sermons/transcribe
  *
- * Accepts an audio file and transcribes it using OpenAI Whisper.
+ * Accepts an audio file and transcribes it using Groq's Whisper-compatible API.
  */
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY not configured. Add it to .env.local' },
+        { error: 'GROQ_API_KEY not configured. Add it to Vercel env vars.' },
         { status: 500 }
       );
     }
@@ -25,23 +25,23 @@ export async function POST(request: NextRequest) {
     const audioBuffer = Buffer.from(await file.arrayBuffer());
     const blob = new Blob([audioBuffer], { type: file.type });
 
-    const openaiForm = new FormData();
-    openaiForm.append('file', blob, file.name || 'audio.webm');
-    openaiForm.append('model', 'whisper-1');
-    openaiForm.append('response_format', 'verbose_json');
-    openaiForm.append('language', 'en');
+    const groqForm = new FormData();
+    groqForm.append('file', blob, file.name || 'audio.webm');
+    groqForm.append('model', 'whisper-large-v3-turbo');
+    groqForm.append('response_format', 'verbose_json');
+    groqForm.append('language', 'en');
 
-    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
       },
-      body: openaiForm,
+      body: groqForm,
     });
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.error('OpenAI Whisper error:', res.status, errBody);
+      console.error('Groq Whisper error:', res.status, errBody);
       return NextResponse.json(
         { error: `Transcription failed: ${res.status}. ${errBody}` },
         { status: 502 }
