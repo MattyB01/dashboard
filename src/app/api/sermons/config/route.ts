@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'key and value required' }, { status: 400 });
     }
 
-    // Simple auth — match the Vercel deploy token
-    if (secret !== process.env.VERCEL_TOKEN) {
+    // Simple auth — match the dashboard password
+    if (secret !== process.env.DASHBOARD_PASSWORD) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         // Retry
         const body = await request.json();
         const { key, value, secret } = body;
-        if (secret !== process.env.VERCEL_TOKEN) {
+        if (secret !== process.env.DASHBOARD_PASSWORD) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         await sql`
