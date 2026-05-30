@@ -575,7 +575,7 @@ export default function SermonsPage() {
 
                 {sermon.status === 'processing' && (
                   <p className="text-xs text-secondary leading-relaxed line-clamp-2 mb-3">
-                    {sermon.errorMessage || 'Processing...'}
+                    {(sermon as any).progressMsg || 'Processing...'}
                   </p>
                 )}
 
