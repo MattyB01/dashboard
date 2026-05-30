@@ -9,6 +9,7 @@ const publicPaths = [
   '/api/proxy',
   '/api/phone-usage',
   '/api/sermons',
+  '/api/sermons/config',
 ];
 
 export async function middleware(request: NextRequest) {

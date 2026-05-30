@@ -75,7 +75,7 @@ async function deleteSermonDb(id: string): Promise<void> {
   } catch {}
 }
 
-const VPS_URL = process.env.NEXT_PUBLIC_VPS_URL || 'http://100.67.197.8:8766';
+const VPS_URL = process.env.NEXT_PUBLIC_VPS_URL || 'https://salmon-selected-solely-record.trycloudflare.com';
 
 // ─── Bible verse card colors ──────────────────────────────────────────────────
 
