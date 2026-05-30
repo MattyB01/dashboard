@@ -37,19 +37,42 @@ interface SermonEntry {
   errorMessage?: string;
 }
 
-// ─── Storage helpers ───────────────────────────────────────────────────────────
+// ─── Database helpers ──────────────────────────────────────────────────────────
 
-function loadSermons(): SermonEntry[] {
-  if (typeof window === 'undefined') return [];
+async function fetchSermons(): Promise<SermonEntry[]> {
   try {
-    return JSON.parse(localStorage.getItem('sermons') || '[]');
-  } catch {
-    return [];
-  }
+    const res = await fetch('/api/sermons/db');
+    if (res.ok) return await res.json();
+  } catch {}
+  return [];
 }
 
-function saveSermons(sermons: SermonEntry[]) {
-  localStorage.setItem('sermons', JSON.stringify(sermons));
+async function createSermon(entry: SermonEntry): Promise<SermonEntry | null> {
+  try {
+    const res = await fetch('/api/sermons/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+
+async function updateSermonDb(id: string, fields: Record<string, any>): Promise<void> {
+  try {
+    await fetch('/api/sermons/db', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...fields }),
+    });
+  } catch {}
+}
+
+async function deleteSermonDb(id: string): Promise<void> {
+  try {
+    await fetch(`/api/sermons/db?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch {}
 }
 
 // ─── Audio chunking — split long audio into small WAV chunks ──────────────
@@ -180,13 +203,14 @@ export default function SermonsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const loaded = loadSermons();
-    setSermons(loaded);
-    // Find any processing sermons from a previous page visit
-    const processing = new Set(
-      loaded.filter(s => s.status === 'processing').map(s => s.id)
-    );
-    setProcessingIds(processing);
+    fetchSermons().then(loaded => {
+      setSermons(loaded);
+      // Find any processing sermons from a previous page visit
+      const processing = new Set(
+        loaded.filter((s: SermonEntry) => s.status === 'processing').map((s: SermonEntry) => s.id)
+      );
+      setProcessingIds(processing);
+    });
   }, []);
 
   if (!mounted) return null;
@@ -225,10 +249,9 @@ export default function SermonsPage() {
         status: 'processing',
       };
 
-      // Save to state + localStorage immediately
-      const updated = [entry, ...sermons];
-      setSermons(updated);
-      saveSermons(updated);
+      // Save to DB immediately
+      await createSermon(entry);
+      setSermons(prev => [entry, ...prev]);
       setProcessingIds(prev => new Set(prev).add(entryId));
 
       // Navigate to library so user can see it processing
@@ -348,9 +371,20 @@ export default function SermonsPage() {
         }
         return merged;
       });
-      saveSermons(next);
       return next;
     });
+
+    // Sync important fields to DB (skip progressMsg for speed)
+    const syncFields: Record<string, any> = {};
+    if ('transcript' in updates) syncFields.transcript = updates.transcript;
+    if ('notes' in updates) syncFields.notes = updates.notes;
+    if ('theme' in updates) syncFields.theme = updates.theme;
+    if ('topic' in updates) syncFields.topic = updates.topic;
+    if ('status' in updates) syncFields.status = updates.status;
+    if ('errorMessage' in updates) syncFields.errorMessage = updates.errorMessage;
+    if (Object.keys(syncFields).length > 0) {
+      updateSermonDb(id, syncFields);
+    }
   }
 
   function resetForm() {
@@ -366,7 +400,7 @@ export default function SermonsPage() {
   function handleDelete(id: string) {
     const updated = sermons.filter(s => s.id !== id);
     setSermons(updated);
-    saveSermons(updated);
+    deleteSermonDb(id);
     if (selectedId === id) setView('library');
   }
 
