@@ -102,7 +102,7 @@ function audioBufferToWav16kMono(buffer: AudioBuffer): Promise<Blob[]> {
       const srcPos = startSample + (i * srcSr / targetSr);
       const idx = Math.floor(srcPos);
       const frac = srcPos - idx;
-      const idxClamped = Math.min(idx, actualSamples - 2);
+      const idxClamped = Math.min(idx, endSample - 2);
 
       // Linear interpolation across channels, mix to mono
       let s = 0;
