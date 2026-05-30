@@ -1,11 +1,13 @@
 /**
  * POST /api/sermons/notes
  *
- * Takes a transcript and returns AI-generated notes using Groq LLM.
+ * Takes a transcript and returns AI-generated notes using
+ * opencode-go API. No Groq dependency for LLM.
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-const GROQ_BASE = 'https://api.groq.com/openai/v1';
+const OPENCODE_BASE = process.env.OPENCODE_BASE || 'https://opencode.ai/zen/go/v1';
+const OPENCODE_KEY = process.env.OPENCODE_GO_API_KEY || '';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +20,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
+    if (!OPENCODE_KEY) {
       return NextResponse.json(
-        { error: 'GROQ_API_KEY not configured. Add it to Vercel env vars.' },
+        { error: 'OPENCODE_GO_API_KEY not configured' },
         { status: 500 }
       );
     }
@@ -55,14 +56,15 @@ Title: ${title || 'Untitled Sermon'}
 Transcript:
 ${transcript}`;
 
-    const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+    const res = await fetch(`${OPENCODE_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${OPENCODE_KEY}`,
+        'User-Agent': 'hermes-cli',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'deepseek-v4-flash',
         messages: [
           {
             role: 'system',
@@ -77,7 +79,7 @@ ${transcript}`;
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.error('Groq notes error:', res.status, errBody);
+      console.error('OpenCode notes error:', res.status, errBody);
       return NextResponse.json(
         { error: `Notes generation failed: ${res.status}` },
         { status: 502 }
