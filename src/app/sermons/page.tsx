@@ -77,6 +77,18 @@ async function deleteSermonDb(id: string): Promise<void> {
 
 const VPS_URL = process.env.NEXT_PUBLIC_VPS_URL || 'https://salmon-selected-solely-record.trycloudflare.com';
 
+// Auto-discover VPS tunnel URL from config endpoint
+async function getVpsUrl(): Promise<string> {
+  try {
+    const res = await fetch('/api/sermons/config?key=vps_url');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.value) return data.value;
+    }
+  } catch {}
+  return VPS_URL; // fallback
+}
+
 // ─── Bible verse card colors ──────────────────────────────────────────────────
 
 const VERSE_COLORS = [
@@ -179,7 +191,8 @@ export default function SermonsPage() {
       formData.append('theme', theme || '');
       formData.append('topic', topic || '');
 
-      const res = await fetch(`${VPS_URL}/process`, {
+      const vpsUrl = await getVpsUrl();
+      const res = await fetch(`${vpsUrl}/process`, {
         method: 'POST',
         body: formData,
       });
