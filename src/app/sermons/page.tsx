@@ -75,101 +75,7 @@ async function deleteSermonDb(id: string): Promise<void> {
   } catch {}
 }
 
-// ─── Audio chunking — split long audio into small WAV chunks ──────────────
-// A 60-second chunk at 16kHz mono 16-bit PCM = ~1.92MB, well under Vercel's 4.5MB limit.
-// Chunks are processed sequentially and transcripts concatenated.
-
-function audioBufferToWav16kMono(buffer: AudioBuffer): Promise<Blob[]> {
-  const chunks: Blob[] = [];
-  const CHUNK_SEC = 60;
-  const targetSr = 16000;
-  const srcSr = buffer.sampleRate;
-  const srcLen = buffer.length;
-  const srcCh = buffer.numberOfChannels;
-
-  // Total resampled length
-  const totalOutLen = Math.round(srcLen * targetSr / srcSr);
-  const chunkOutLen = CHUNK_SEC * targetSr;
-
-  // Resample a segment of the source buffer to 16kHz mono
-  function resampleSegment(startSample: number, numSamples: number): Float32Array {
-    const endSample = Math.min(startSample + numSamples, srcLen);
-    const actualSamples = endSample - startSample;
-    const outLen = Math.round(actualSamples * targetSr / srcSr);
-    const out = new Float32Array(outLen);
-
-    for (let i = 0; i < outLen; i++) {
-      const srcPos = startSample + (i * srcSr / targetSr);
-      const idx = Math.floor(srcPos);
-      const frac = srcPos - idx;
-      const idxClamped = Math.min(idx, endSample - 2);
-
-      // Linear interpolation across channels, mix to mono
-      let s = 0;
-      for (let c = 0; c < srcCh; c++) {
-        const chData = buffer.getChannelData(c);
-        const sample = startSample + idxClamped;
-        if (sample >= 0 && sample < srcLen - 1) {
-          s += chData[sample] * (1 - frac) + chData[sample + 1] * frac;
-        }
-      }
-      out[i] = s / srcCh;
-    }
-    return out;
-  }
-
-  function pcmToWav(pcm: Float32Array): Blob {
-    const numSamples = pcm.length;
-    const buf = new ArrayBuffer(44 + numSamples * 2);
-    const v = new DataView(buf);
-    const w = (off: number, str: string) => { for (let i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); };
-    w(0, 'RIFF');
-    v.setUint32(4, 36 + numSamples * 2, true);
-    w(8, 'WAVE');
-    w(12, 'fmt ');
-    v.setUint32(16, 16, true);
-    v.setUint16(20, 1, true);
-    v.setUint16(22, 1, true);
-    v.setUint32(24, targetSr, true);
-    v.setUint32(28, targetSr * 2, true);
-    v.setUint16(32, 2, true);
-    v.setUint16(34, 16, true);
-    w(36, 'data');
-    v.setUint32(40, numSamples * 2, true);
-    for (let i = 0; i < numSamples; i++) {
-      const s = Math.max(-1, Math.min(1, pcm[i]));
-      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-    return new Blob([buf], { type: 'audio/wav' });
-  }
-
-  // Process in chunks, resampling each chunk independently to avoid loading
-  // the entire decoded buffer at once at the target rate.
-  // We read from the source buffer in windows that yield ~60s of output.
-  const srcSamplesPerChunk = Math.round(chunkOutLen * srcSr / targetSr);
-  let srcOffset = 0;
-
-  while (srcOffset < srcLen) {
-    const pcm = resampleSegment(srcOffset, srcSamplesPerChunk);
-
-    // Skip silent chunks (Whisper hallucinates on silence)
-    let sumSq = 0;
-    for (let i = 0; i < pcm.length; i++) sumSq += pcm[i] * pcm[i];
-    const rms = Math.sqrt(sumSq / pcm.length);
-    if (rms > 0.01) {
-      chunks.push(pcmToWav(pcm));
-    }
-
-    srcOffset += srcSamplesPerChunk;
-  }
-
-  // Edge case: tiny last chunk might be empty
-  if (chunks.length > 0 && chunks[chunks.length - 1].size <= 44) {
-    chunks.pop();
-  }
-
-  return Promise.resolve(chunks);
-}
+const VPS_URL = process.env.NEXT_PUBLIC_VPS_URL || 'http://100.67.197.8:8766';
 
 // ─── Bible verse card colors ──────────────────────────────────────────────────
 
@@ -202,8 +108,6 @@ export default function SermonsPage() {
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [progressMsg, setProgressMsg] = useState('');
-  const processingRef = useRef(false);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
   // Filter / sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,13 +117,26 @@ export default function SermonsPage() {
     setMounted(true);
     fetchSermons().then(loaded => {
       setSermons(loaded);
-      // Find any processing sermons from a previous page visit
       const processing = new Set(
         loaded.filter((s: SermonEntry) => s.status === 'processing').map((s: SermonEntry) => s.id)
       );
       setProcessingIds(processing);
     });
   }, []);
+
+  // Poll DB while any sermon is still processing
+  useEffect(() => {
+    if (processingIds.size === 0) return;
+    const interval = setInterval(async () => {
+      const loaded = await fetchSermons();
+      setSermons(loaded);
+      const stillProcessing = new Set(
+        loaded.filter((s: SermonEntry) => s.status === 'processing').map((s: SermonEntry) => s.id)
+      );
+      setProcessingIds(stillProcessing);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [processingIds.size]);
 
   if (!mounted) return null;
 
@@ -228,23 +145,15 @@ export default function SermonsPage() {
   async function handleUpload() {
     if (!audioFile) { setError('Please select an audio file'); return; }
     if (!ministry.trim()) { setError('Please enter a ministry name'); return; }
-    if (processingRef.current) return;
 
     setIsProcessing(true);
     setError('');
-    setProgressMsg('Reading audio file...');
-    processingRef.current = true;
+    setProgressMsg('Uploading...');
+
+    const entryId = crypto.randomUUID?.() || Date.now().toString(36);
 
     try {
-      // Decode audio during user gesture (required by mobile browsers)
-      setProgressMsg('Reading audio file...');
-      const arrayBuffer = await audioFile.arrayBuffer();
-      const audioCtx = new AudioContext();
-      const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-      audioBufferRef.current = decoded;
-
-      // Create entry immediately with processing status
-      const entryId = crypto.randomUUID?.() || Date.now().toString(36);
+      // Create entry immediately so it shows in library
       const entry: SermonEntry = {
         id: entryId,
         date,
@@ -256,142 +165,41 @@ export default function SermonsPage() {
         createdAt: new Date().toISOString(),
         status: 'processing',
       };
-
-      // Save to DB immediately
       await createSermon(entry);
       setSermons(prev => [entry, ...prev]);
       setProcessingIds(prev => new Set(prev).add(entryId));
 
-      // Navigate to library so user can see it processing
-      setView('library');
+      // Upload raw file to VPS — it'll chunk & process server-side
+      const formData = new FormData();
+      formData.append('audio', audioFile);
+      formData.append('id', entryId);
+      formData.append('title', title.trim() || 'Untitled Sermon');
+      formData.append('date', date);
+      formData.append('ministry', ministry.trim());
+      formData.append('theme', theme || '');
+      formData.append('topic', topic || '');
 
-      // Save title before reset
-      const finalTitle = title.trim() || 'Untitled Sermon';
-      resetForm();
-      setIsProcessing(false);
-      setProgressMsg('');
-
-      // Fire off background processing with pre-decoded buffer
-      processInBackground(entryId, decoded, audioCtx, finalTitle);
-    } catch (err: any) {
-      setError(err.message || 'Failed to start processing');
-      setIsProcessing(false);
-      setProgressMsg('');
-      processingRef.current = false;
-    }
-  }
-
-  async function processInBackground(
-    entryId: string,
-    audioBuffer: AudioBuffer,
-    audioCtx: AudioContext,
-    sermonTitle: string,
-  ) {
-    try {
-      // Step 1: Split into chunks
-      updateSermon(entryId, { progressMsg: 'Processing audio...' });
-      const chunks = await audioBufferToWav16kMono(audioBuffer);
-      audioCtx.close();
-
-      if (chunks.length === 0) throw new Error('Could not process audio file');
-
-      // Step 2: Transcribe each chunk sequentially
-      let fullTranscript = '';
-      for (let i = 0; i < chunks.length; i++) {
-        updateSermon(entryId, {
-          progressMsg: `Transcribing part ${i + 1} of ${chunks.length}...`,
-        });
-
-        const formData = new FormData();
-        formData.append('audio', chunks[i], `chunk-${i}.wav`);
-
-        const transRes = await fetch('/api/sermons/transcribe', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!transRes.ok) {
-          let errMsg = 'Transcription failed';
-          try {
-            const errData = await transRes.json();
-            errMsg = errData.error || errMsg;
-          } catch {
-            const text = await transRes.text();
-            errMsg = `Server error (${transRes.status}): ${text.slice(0, 200)}`;
-          }
-          throw new Error(`${errMsg} (part ${i + 1} of ${chunks.length})`);
-        }
-
-        const transData = await transRes.json();
-        fullTranscript += (fullTranscript ? ' ' : '') + (transData.transcript || '');
-      }
-
-      if (!fullTranscript || fullTranscript.trim().length < 10) {
-        throw new Error('Transcription too short or empty');
-      }
-
-      // Step 3: Generate notes from full transcript
-      updateSermon(entryId, { progressMsg: 'Generating notes...' });
-      const notesRes = await fetch('/api/sermons/notes', {
+      const res = await fetch(`${VPS_URL}/process`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: fullTranscript, title: sermonTitle }),
+        body: formData,
       });
 
-      let notes: SermonNotes | undefined;
-      if (notesRes.ok) {
-        notes = await notesRes.json();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Upload failed (${res.status})`);
       }
 
-      // Step 4: Update entry with results
-      updateSermon(entryId, {
-        transcript: fullTranscript,
-        notes,
-        theme: notes?.theme || '',
-        topic: notes?.topic || '',
-        status: 'completed',
-        progressMsg: undefined,
-      });
+      resetForm();
+      setView('library');
     } catch (err: any) {
-      updateSermon(entryId, {
-        status: 'error',
-        errorMessage: err.message || 'Something went wrong',
-        progressMsg: undefined,
-      });
+      setError(err.message || 'Upload failed');
+      // Mark entry as errored so it doesn't show spinning forever
+      setSermons(prev => prev.map(s =>
+        s.id === entryId ? { ...s, status: 'error', errorMessage: err.message } : s
+      ));
     } finally {
-      processingRef.current = false;
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(entryId);
-        return next;
-      });
-    }
-  }
-
-  function updateSermon(id: string, updates: Partial<SermonEntry> & { progressMsg?: string }) {
-    setSermons(prev => {
-      const next = prev.map(s => {
-        if (s.id !== id) return s;
-        const merged = { ...s, ...updates };
-        // Remove progressMsg when set to undefined
-        if (updates.progressMsg === undefined && 'progressMsg' in updates) {
-          delete (merged as any).progressMsg;
-        }
-        return merged;
-      });
-      return next;
-    });
-
-    // Sync important fields to DB (skip progressMsg for speed)
-    const syncFields: Record<string, any> = {};
-    if ('transcript' in updates) syncFields.transcript = updates.transcript;
-    if ('notes' in updates) syncFields.notes = updates.notes;
-    if ('theme' in updates) syncFields.theme = updates.theme;
-    if ('topic' in updates) syncFields.topic = updates.topic;
-    if ('status' in updates) syncFields.status = updates.status;
-    if ('errorMessage' in updates) syncFields.errorMessage = updates.errorMessage;
-    if (Object.keys(syncFields).length > 0) {
-      updateSermonDb(id, syncFields);
+      setIsProcessing(false);
+      setProgressMsg('');
     }
   }
 
@@ -630,7 +438,7 @@ export default function SermonsPage() {
 
                 {sermon.status === 'processing' && (
                   <p className="text-xs text-secondary leading-relaxed line-clamp-2 mb-3">
-                    {(sermon as any).progressMsg || 'Processing...'}
+                    Transcribing on server...
                   </p>
                 )}
 
@@ -685,7 +493,7 @@ export default function SermonsPage() {
         </button>
 
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-1">New Sermon</h1>
-        <p className="text-sm text-muted mb-8">Upload an audio recording and let AI generate structured notes</p>
+        <p className="text-sm text-muted mb-8">Upload an audio recording — transcription and notes are generated on the server</p>
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-6">
@@ -701,8 +509,8 @@ export default function SermonsPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-fg mb-1">Processing...</h3>
-            <p className="text-sm text-muted">{progressMsg}</p>
+            <h3 className="text-base font-semibold text-fg mb-1">Uploading...</h3>
+            <p className="text-sm text-muted">Transferring audio to server — you'll be redirected to the library once uploaded</p>
             <div className="mt-4 max-w-xs mx-auto bg-line rounded-full h-1.5 overflow-hidden">
               <div className="bg-accent h-full rounded-full animate-pulse" style={{ width: '60%' }} />
             </div>
@@ -727,7 +535,7 @@ export default function SermonsPage() {
                     </svg>
                     <div className="text-left">
                       <p className="text-sm font-medium text-accent">{audioFile.name}</p>
-                      <p className="text-xs text-secondary">{(audioFile.size / 1024 / 1024).toFixed(1)} MB (will be compressed)</p>
+                      <p className="text-xs text-secondary">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
                     </div>
                     <button
                       onClick={e => { e.stopPropagation(); setAudioFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
@@ -744,7 +552,7 @@ export default function SermonsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                     <p className="text-sm text-muted">Tap to select an audio file</p>
-                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM — compressed before upload</p>
+                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM — uploaded directly to server</p>
                   </div>
                 )}
                 <input
@@ -810,7 +618,7 @@ export default function SermonsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Upload &amp; Generate Notes
+              Upload &amp; Process Server-side
             </button>
           </div>
         )}
@@ -894,8 +702,8 @@ export default function SermonsPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-fg mb-1">Processing...</h3>
-            <p className="text-sm text-muted">This sermon is still being transcribed. Check back shortly.</p>
+            <h3 className="text-base font-semibold text-fg mb-1">Processing on server...</h3>
+            <p className="text-sm text-muted">This page will update automatically when transcription is complete</p>
           </div>
         ) : s.status === 'error' ? (
           <div className="bg-card border border-rose-200 rounded-2xl p-8 text-center">
