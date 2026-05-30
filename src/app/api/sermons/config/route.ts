@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
 // POST /api/sermons/config — set a config value (requires API secret)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const text = await request.text();
+    const body = JSON.parse(text);
     const { key, value, secret } = body;
 
     if (!key || value === undefined) {
@@ -41,6 +42,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Ensure table exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS sermon_config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
     // Upsert
     await sql`
       INSERT INTO sermon_config (key, value, updated_at)
@@ -50,33 +60,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    // Auto-create table if it doesn't exist
-    if (err.message?.includes('does not exist')) {
-      try {
-        await sql`
-          CREATE TABLE IF NOT EXISTS sermon_config (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-          )
-        `;
-        // Retry
-        const body = await request.json();
-        const { key, value, secret } = body;
-        if (secret !== process.env.DASHBOARD_PASSWORD) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        await sql`
-          INSERT INTO sermon_config (key, value, updated_at)
-          VALUES (${key}, ${value}, NOW())
-          ON CONFLICT (key) DO UPDATE SET value = ${value}, updated_at = NOW()
-        `;
-        return NextResponse.json({ success: true });
-      } catch (e2: any) {
-        console.error('Config create table error:', e2);
-        return NextResponse.json({ error: e2.message }, { status: 500 });
-      }
-    }
     console.error('Config POST error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
