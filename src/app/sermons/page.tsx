@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import SiteHeader from '@/components/SiteHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type SermonStatus = 'processing' | 'completed' | 'error';
 
 interface BibleVerse {
   reference: string;
@@ -31,6 +33,8 @@ interface SermonEntry {
   transcript: string;
   notes?: SermonNotes;
   createdAt: string;
+  status: SermonStatus;
+  errorMessage?: string;
 }
 
 // ─── Storage helpers ───────────────────────────────────────────────────────────
@@ -46,6 +50,65 @@ function loadSermons(): SermonEntry[] {
 
 function saveSermons(sermons: SermonEntry[]) {
   localStorage.setItem('sermons', JSON.stringify(sermons));
+}
+
+// ─── Audio compression — downsample to mono 16kHz WAV ───────────────────────
+// This typically reduces file size by 80-90% vs raw stereo 44.1kHz,
+// keeping it well under Vercel's 4.5MB request limit.
+
+async function compressAudio(file: File): Promise<Blob> {
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx = new AudioContext();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  // Get raw PCM data (mono, 16kHz)
+  const targetSampleRate = 16000;
+  const numChannels = 1;
+  const originalLength = audioBuffer.length;
+  const originalSampleRate = audioBuffer.sampleRate;
+
+  // Downmix to mono and resample
+  const ratio = originalSampleRate / targetSampleRate;
+  const newLength = Math.round(originalLength / ratio);
+  const offlineCtx = new OfflineAudioContext(numChannels, newLength, targetSampleRate);
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const renderedBuffer = await offlineCtx.startRendering();
+  const channelData = renderedBuffer.getChannelData(0);
+
+  // Convert Float32 to 16-bit PCM WAV
+  const numSamples = channelData.length;
+  const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(wavBuffer);
+
+  function writeString(offset: number, str: string) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);           // chunk size
+  view.setUint16(20, 1, true);            // PCM
+  view.setUint16(22, 1, true);            // mono
+  view.setUint32(24, targetSampleRate, true);
+  view.setUint32(28, targetSampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true);            // block align
+  view.setUint16(34, 16, true);           // bits per sample
+  writeString(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+
+  return new Blob([wavBuffer], { type: 'audio/wav' });
 }
 
 // ─── Bible verse card colors ──────────────────────────────────────────────────
@@ -66,6 +129,7 @@ export default function SermonsPage() {
   const [sermons, setSermons] = useState<SermonEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   // Upload form state
   const [title, setTitle] = useState('');
@@ -78,6 +142,7 @@ export default function SermonsPage() {
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [progressMsg, setProgressMsg] = useState('');
+  const processingRef = useRef(false);
 
   // Filter / sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,50 +150,104 @@ export default function SermonsPage() {
 
   useEffect(() => {
     setMounted(true);
-    setSermons(loadSermons());
+    const loaded = loadSermons();
+    setSermons(loaded);
+    // Find any processing sermons from a previous page visit
+    const processing = new Set(
+      loaded.filter(s => s.status === 'processing').map(s => s.id)
+    );
+    setProcessingIds(processing);
   }, []);
 
   if (!mounted) return null;
 
-  // ── Upload & process ──────────────────────────────────────────────────────
+  // ── Audio compression & upload ───────────────────────────────────────────
 
   async function handleUpload() {
     if (!audioFile) { setError('Please select an audio file'); return; }
     if (!ministry.trim()) { setError('Please enter a ministry name'); return; }
+    if (processingRef.current) return;
 
     setIsProcessing(true);
     setError('');
-    setProgressMsg('Uploading audio...');
+    setProgressMsg('Compressing audio...');
+    processingRef.current = true;
 
+    // Create entry immediately with processing status
+    const entryId = crypto.randomUUID?.() || Date.now().toString(36);
+    const entry: SermonEntry = {
+      id: entryId,
+      date,
+      ministry: ministry.trim(),
+      title: title.trim() || 'Untitled Sermon',
+      theme: theme || '',
+      topic: topic || '',
+      transcript: '',
+      createdAt: new Date().toISOString(),
+      status: 'processing',
+    };
+
+    // Save to state + localStorage immediately
+    const updated = [entry, ...sermons];
+    setSermons(updated);
+    saveSermons(updated);
+    setProcessingIds(prev => new Set(prev).add(entryId));
+
+    // Navigate to library so user can see it processing
+    setView('library');
+    resetForm();
+
+    // Fire off background processing
+    processInBackground(entryId, audioFile, title.trim() || 'Untitled Sermon');
+  }
+
+  async function processInBackground(
+    entryId: string,
+    file: File,
+    sermonTitle: string,
+  ) {
     try {
-      // Step 1: Transcribe via server API
+      // Step 1: Compress audio
+      updateSermon(entryId, { progressMsg: 'Compressing audio...' });
+      const compressed = await compressAudio(file);
+
+      // Step 2: Upload and transcribe via Groq
+      updateSermon(entryId, { progressMsg: 'Transcribing audio...' });
       const formData = new FormData();
-      formData.append('audio', audioFile);
+      formData.append('audio', compressed, 'audio.wav');
 
       const transRes = await fetch('/api/sermons/transcribe', {
         method: 'POST',
         body: formData,
       });
 
+      let transcript: string;
       if (!transRes.ok) {
-        const err = await transRes.json();
-        throw new Error(err.error || 'Transcription failed');
+        let errMsg = 'Transcription failed';
+        try {
+          const errData = await transRes.json();
+          errMsg = errData.error || errMsg;
+        } catch {
+          // Non-JSON response (e.g. Vercel 413 HTML error page)
+          const text = await transRes.text();
+          errMsg = `Server error (${transRes.status}): ${text.slice(0, 200)}`;
+        }
+        throw new Error(errMsg);
       }
 
       const transData = await transRes.json();
-      const transcript: string = transData.transcript;
+      transcript = transData.transcript;
 
       if (!transcript || transcript.trim().length < 10) {
         throw new Error('Transcription too short or empty');
       }
 
-      setProgressMsg('Generating notes from transcript...');
-
-      // Step 2: Generate notes
+      // Step 3: Generate notes
+      updateSermon(entryId, { progressMsg: 'Generating notes...' });
       const notesRes = await fetch('/api/sermons/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, title: title || undefined }),
+        body: JSON.stringify({ transcript, title: sermonTitle }),
       });
 
       let notes: SermonNotes | undefined;
@@ -136,31 +255,37 @@ export default function SermonsPage() {
         notes = await notesRes.json();
       }
 
-      // Step 3: Create entry
-      const entry: SermonEntry = {
-        id: crypto.randomUUID?.() || Date.now().toString(36),
-        date,
-        ministry: ministry.trim(),
-        title: title.trim() || 'Untitled Sermon',
-        theme: notes?.theme || theme || '',
-        topic: notes?.topic || topic || '',
+      // Step 4: Update entry with results
+      updateSermon(entryId, {
         transcript,
         notes,
-        createdAt: new Date().toISOString(),
-      };
-
-      const updated = [entry, ...sermons];
-      setSermons(updated);
-      saveSermons(updated);
-      setSelectedId(entry.id);
-      setView('detail');
-      resetForm();
+        theme: notes?.theme || '',
+        topic: notes?.topic || '',
+        status: 'completed',
+        progressMsg: undefined,
+      });
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      updateSermon(entryId, {
+        status: 'error',
+        errorMessage: err.message || 'Something went wrong',
+        progressMsg: undefined,
+      });
     } finally {
-      setIsProcessing(false);
-      setProgressMsg('');
+      processingRef.current = false;
+      setProcessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(entryId);
+        return next;
+      });
     }
+  }
+
+  function updateSermon(id: string, updates: Partial<SermonEntry> & { progressMsg?: string }) {
+    setSermons(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, ...updates } : s);
+      saveSermons(next);
+      return next;
+    });
   }
 
   function resetForm() {
@@ -178,6 +303,22 @@ export default function SermonsPage() {
     setSermons(updated);
     saveSermons(updated);
     if (selectedId === id) setView('library');
+  }
+
+  function retrySermon(id: string) {
+    const sermon = sermons.find(s => s.id === id);
+    if (!sermon || sermon.status !== 'error') return;
+    updateSermon(id, { status: 'processing', errorMessage: undefined });
+    setProcessingIds(prev => new Set(prev).add(id));
+    // Re-run with just the transcript data — user needs to re-upload
+    // For now, reset to upload form with pre-filled fields
+    setTitle(sermon.title);
+    setMinistry(sermon.ministry);
+    setDate(sermon.date);
+    setTheme(sermon.theme);
+    setTopic(sermon.topic);
+    setView('upload');
+    setError('The audio needs to be re-uploaded. Please select the file again.');
   }
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -210,7 +351,6 @@ export default function SermonsPage() {
         key={i}
         className={`bg-gradient-to-br ${color} border rounded-xl p-4 sm:p-5 relative overflow-hidden`}
       >
-        {/* decorative quote marks */}
         <div className="absolute top-2 right-3 text-4xl leading-none opacity-20 select-none text-fg">
           &ldquo;
         </div>
@@ -250,6 +390,7 @@ export default function SermonsPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Sermon Notes</h1>
             <p className="text-sm text-muted mt-1">
               {sermons.length} sermon{sermons.length !== 1 ? 's' : ''} saved
+              {processingIds.size > 0 && ` · ${processingIds.size} processing`}
             </p>
           </div>
           <button
@@ -316,43 +457,86 @@ export default function SermonsPage() {
             {sorted.map(sermon => (
               <button
                 key={sermon.id}
-                onClick={() => { setSelectedId(sermon.id); setView('detail'); }}
-                className="text-left bg-card border border-line rounded-2xl p-4 sm:p-5 card-shadow hover:shadow-md hover:border-accent/30 transition-all group"
+                onClick={() => {
+                  if (sermon.status === 'processing') return;
+                  setSelectedId(sermon.id);
+                  setView('detail');
+                }}
+                className={`text-left bg-card border rounded-2xl p-4 sm:p-5 card-shadow transition-all group ${
+                  sermon.status === 'processing'
+                    ? 'border-accent/30 opacity-70 cursor-default'
+                    : sermon.status === 'error'
+                    ? 'border-rose-200 hover:border-rose-400 hover:shadow-md'
+                    : 'border-line hover:shadow-md hover:border-accent/30'
+                }`}
               >
-                {/* Date badge */}
+                {/* Date badge + status */}
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[11px] uppercase tracking-wider text-muted font-medium">
-                    {formatDate(sermon.date)}
-                  </span>
-                  <span className="text-muted/40">·</span>
-                  <span className="text-[11px] uppercase tracking-wider text-accent font-medium">
-                    {sermon.ministry}
-                  </span>
+                  {sermon.status === 'processing' ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-accent animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span className="text-[11px] uppercase tracking-wider text-accent font-medium">Processing</span>
+                    </>
+                  ) : sermon.status === 'error' ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-[11px] uppercase tracking-wider text-rose-500 font-medium">Error</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[11px] uppercase tracking-wider text-muted font-medium">
+                        {formatDate(sermon.date)}
+                      </span>
+                      <span className="text-muted/40">·</span>
+                      <span className="text-[11px] uppercase tracking-wider text-accent font-medium">
+                        {sermon.ministry}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <h3 className="font-semibold text-fg group-hover:text-accent transition-colors mb-1.5">
                   {sermon.title}
                 </h3>
 
-                {sermon.theme && (
+                {sermon.status === 'processing' && (
+                  <p className="text-xs text-secondary leading-relaxed line-clamp-2 mb-3">
+                    {sermon.errorMessage || 'Processing...'}
+                  </p>
+                )}
+
+                {sermon.status === 'error' && (
+                  <p className="text-xs text-rose-500 leading-relaxed line-clamp-2 mb-3">
+                    {sermon.errorMessage || 'Transcription failed'}
+                  </p>
+                )}
+
+                {sermon.status === 'completed' && sermon.theme && (
                   <p className="text-xs text-secondary leading-relaxed line-clamp-2 mb-3">
                     {sermon.theme}
                   </p>
                 )}
 
                 {/* Tags */}
-                <div className="flex flex-wrap gap-1.5">
-                  {sermon.topic && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-light text-accent font-medium">
-                      {sermon.topic}
-                    </span>
-                  )}
-                  {sermon.notes?.bible_verses && sermon.notes.bible_verses.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
-                      {sermon.notes.bible_verses.length} verse{sermon.notes.bible_verses.length !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
+                {sermon.status === 'completed' && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sermon.topic && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-light text-accent font-medium">
+                        {sermon.topic}
+                      </span>
+                    )}
+                    {sermon.notes?.bible_verses && sermon.notes.bible_verses.length > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
+                        {sermon.notes.bible_verses.length} verse{sermon.notes.bible_verses.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -418,7 +602,7 @@ export default function SermonsPage() {
                     </svg>
                     <div className="text-left">
                       <p className="text-sm font-medium text-accent">{audioFile.name}</p>
-                      <p className="text-xs text-secondary">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                      <p className="text-xs text-secondary">{(audioFile.size / 1024 / 1024).toFixed(1)} MB (will be compressed)</p>
                     </div>
                     <button
                       onClick={e => { e.stopPropagation(); setAudioFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
@@ -432,10 +616,10 @@ export default function SermonsPage() {
                 ) : (
                   <div>
                     <svg className="w-8 h-8 text-muted mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                     <p className="text-sm text-muted">Tap to select an audio file</p>
-                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM — max 25 MB</p>
+                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM — compressed before upload</p>
                   </div>
                 )}
                 <input
@@ -532,9 +716,28 @@ export default function SermonsPage() {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-xs text-muted font-medium uppercase tracking-wider mb-2">
-                <span>{formatDate(s.date)}</span>
-                <span className="text-muted/30">·</span>
-                <span className="text-accent">{s.ministry}</span>
+                {s.status === 'processing' ? (
+                  <span className="text-accent flex items-center gap-1.5">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Processing...
+                  </span>
+                ) : s.status === 'error' ? (
+                  <span className="text-rose-500 flex items-center gap-1.5">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    Error
+                  </span>
+                ) : (
+                  <>
+                    <span>{formatDate(s.date)}</span>
+                    <span className="text-muted/30">·</span>
+                    <span className="text-accent">{s.ministry}</span>
+                  </>
+                )}
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-words">{s.title}</h1>
             </div>
@@ -558,7 +761,34 @@ export default function SermonsPage() {
           )}
         </div>
 
-        {!n ? (
+        {s.status === 'processing' ? (
+          <div className="bg-card border border-line rounded-2xl p-8 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-accent-light rounded-2xl mb-4">
+              <svg className="w-7 h-7 text-accent animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-fg mb-1">Processing...</h3>
+            <p className="text-sm text-muted">This sermon is still being transcribed. Check back shortly.</p>
+          </div>
+        ) : s.status === 'error' ? (
+          <div className="bg-card border border-rose-200 rounded-2xl p-8 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-rose-50 rounded-2xl mb-4">
+              <svg className="w-7 h-7 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-fg mb-1">Transcription Failed</h3>
+            <p className="text-sm text-rose-500 mb-4">{s.errorMessage || 'Something went wrong'}</p>
+            <button
+              onClick={() => retrySermon(s.id)}
+              className="inline-flex items-center gap-2 bg-accent text-white text-sm font-medium px-4 py-2 rounded-xl hover:brightness-110 transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        ) : !n ? (
           <div className="bg-card border border-line rounded-2xl p-8 text-center">
             <p className="text-sm text-muted">No AI notes available for this sermon yet.</p>
           </div>

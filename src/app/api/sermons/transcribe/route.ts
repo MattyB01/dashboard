@@ -2,8 +2,13 @@
  * POST /api/sermons/transcribe
  *
  * Accepts an audio file and transcribes it using Groq's Whisper-compatible API.
+ * Vercel timeout: max 60s (Hobby) / 300s (Pro)
  */
 import { NextRequest, NextResponse } from 'next/server';
+
+export const config = {
+  maxDuration: 60,
+};
 
 export async function POST(request: NextRequest) {
   try {
