@@ -52,63 +52,92 @@ function saveSermons(sermons: SermonEntry[]) {
   localStorage.setItem('sermons', JSON.stringify(sermons));
 }
 
-// ─── Audio compression — downsample to mono 16kHz WAV ───────────────────────
-// This typically reduces file size by 80-90% vs raw stereo 44.1kHz,
-// keeping it well under Vercel's 4.5MB request limit.
+// ─── Audio chunking — split long audio into small WAV chunks ──────────────
+// A 60-second chunk at 16kHz mono 16-bit PCM = ~1.92MB, well under Vercel's 4.5MB limit.
+// Chunks are processed sequentially and transcripts concatenated.
 
-async function compressAudio(file: File): Promise<Blob> {
-  const arrayBuffer = await file.arrayBuffer();
-  const audioCtx = new AudioContext();
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+function audioBufferToWav16kMono(buffer: AudioBuffer): Promise<Blob[]> {
+  const chunks: Blob[] = [];
+  const CHUNK_SEC = 60;
+  const targetSr = 16000;
+  const srcSr = buffer.sampleRate;
+  const srcLen = buffer.length;
+  const srcCh = buffer.numberOfChannels;
 
-  // Get raw PCM data (mono, 16kHz)
-  const targetSampleRate = 16000;
-  const numChannels = 1;
-  const originalLength = audioBuffer.length;
-  const originalSampleRate = audioBuffer.sampleRate;
+  // Total resampled length
+  const totalOutLen = Math.round(srcLen * targetSr / srcSr);
+  const chunkOutLen = CHUNK_SEC * targetSr;
 
-  // Downmix to mono and resample
-  const ratio = originalSampleRate / targetSampleRate;
-  const newLength = Math.round(originalLength / ratio);
-  const offlineCtx = new OfflineAudioContext(numChannels, newLength, targetSampleRate);
+  // Resample a segment of the source buffer to 16kHz mono
+  function resampleSegment(startSample: number, numSamples: number): Float32Array {
+    const endSample = Math.min(startSample + numSamples, srcLen);
+    const actualSamples = endSample - startSample;
+    const outLen = Math.round(actualSamples * targetSr / srcSr);
+    const out = new Float32Array(outLen);
 
-  const source = offlineCtx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offlineCtx.destination);
-  source.start(0);
+    for (let i = 0; i < outLen; i++) {
+      const srcPos = startSample + (i * srcSr / targetSr);
+      const idx = Math.floor(srcPos);
+      const frac = srcPos - idx;
+      const idxClamped = Math.min(idx, actualSamples - 2);
 
-  const renderedBuffer = await offlineCtx.startRendering();
-  const channelData = renderedBuffer.getChannelData(0);
-
-  // Convert Float32 to 16-bit PCM WAV
-  const numSamples = channelData.length;
-  const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
-  const view = new DataView(wavBuffer);
-
-  function writeString(offset: number, str: string) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      // Linear interpolation across channels, mix to mono
+      let s = 0;
+      for (let c = 0; c < srcCh; c++) {
+        const chData = buffer.getChannelData(c);
+        const sample = startSample + idxClamped;
+        if (sample >= 0 && sample < srcLen - 1) {
+          s += chData[sample] * (1 - frac) + chData[sample + 1] * frac;
+        }
+      }
+      out[i] = s / srcCh;
+    }
+    return out;
   }
 
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + numSamples * 2, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);           // chunk size
-  view.setUint16(20, 1, true);            // PCM
-  view.setUint16(22, 1, true);            // mono
-  view.setUint32(24, targetSampleRate, true);
-  view.setUint32(28, targetSampleRate * 2, true); // byte rate
-  view.setUint16(32, 2, true);            // block align
-  view.setUint16(34, 16, true);           // bits per sample
-  writeString(36, 'data');
-  view.setUint32(40, numSamples * 2, true);
-
-  for (let i = 0; i < numSamples; i++) {
-    const s = Math.max(-1, Math.min(1, channelData[i]));
-    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  function pcmToWav(pcm: Float32Array): Blob {
+    const numSamples = pcm.length;
+    const buf = new ArrayBuffer(44 + numSamples * 2);
+    const v = new DataView(buf);
+    const w = (off: number, str: string) => { for (let i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); };
+    w(0, 'RIFF');
+    v.setUint32(4, 36 + numSamples * 2, true);
+    w(8, 'WAVE');
+    w(12, 'fmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true);
+    v.setUint32(24, targetSr, true);
+    v.setUint32(28, targetSr * 2, true);
+    v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true);
+    w(36, 'data');
+    v.setUint32(40, numSamples * 2, true);
+    for (let i = 0; i < numSamples; i++) {
+      const s = Math.max(-1, Math.min(1, pcm[i]));
+      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([buf], { type: 'audio/wav' });
   }
 
-  return new Blob([wavBuffer], { type: 'audio/wav' });
+  // Process in chunks, resampling each chunk independently to avoid loading
+  // the entire decoded buffer at once at the target rate.
+  // We read from the source buffer in windows that yield ~60s of output.
+  const srcSamplesPerChunk = Math.round(chunkOutLen * srcSr / targetSr);
+  let srcOffset = 0;
+
+  while (srcOffset < srcLen) {
+    const pcm = resampleSegment(srcOffset, srcSamplesPerChunk);
+    chunks.push(pcmToWav(pcm));
+    srcOffset += srcSamplesPerChunk;
+  }
+
+  // Edge case: tiny last chunk might be empty
+  if (chunks.length > 0 && chunks[chunks.length - 1].size <= 44) {
+    chunks.pop();
+  }
+
+  return Promise.resolve(chunks);
 }
 
 // ─── Bible verse card colors ──────────────────────────────────────────────────
@@ -170,35 +199,47 @@ export default function SermonsPage() {
 
     setIsProcessing(true);
     setError('');
-    setProgressMsg('Compressing audio...');
+    setProgressMsg('Reading audio file...');
     processingRef.current = true;
 
-    // Create entry immediately with processing status
-    const entryId = crypto.randomUUID?.() || Date.now().toString(36);
-    const entry: SermonEntry = {
-      id: entryId,
-      date,
-      ministry: ministry.trim(),
-      title: title.trim() || 'Untitled Sermon',
-      theme: theme || '',
-      topic: topic || '',
-      transcript: '',
-      createdAt: new Date().toISOString(),
-      status: 'processing',
-    };
+    try {
+      // Create entry immediately with processing status
+      const entryId = crypto.randomUUID?.() || Date.now().toString(36);
+      const entry: SermonEntry = {
+        id: entryId,
+        date,
+        ministry: ministry.trim(),
+        title: title.trim() || 'Untitled Sermon',
+        theme: theme || '',
+        topic: topic || '',
+        transcript: '',
+        createdAt: new Date().toISOString(),
+        status: 'processing',
+      };
 
-    // Save to state + localStorage immediately
-    const updated = [entry, ...sermons];
-    setSermons(updated);
-    saveSermons(updated);
-    setProcessingIds(prev => new Set(prev).add(entryId));
+      // Save to state + localStorage immediately
+      const updated = [entry, ...sermons];
+      setSermons(updated);
+      saveSermons(updated);
+      setProcessingIds(prev => new Set(prev).add(entryId));
 
-    // Navigate to library so user can see it processing
-    setView('library');
-    resetForm();
+      // Navigate to library so user can see it processing
+      setView('library');
 
-    // Fire off background processing
-    processInBackground(entryId, audioFile, title.trim() || 'Untitled Sermon');
+      // Save title before reset
+      const finalTitle = title.trim() || 'Untitled Sermon';
+      resetForm();
+      setIsProcessing(false);
+      setProgressMsg('');
+
+      // Fire off background processing
+      processInBackground(entryId, audioFile, finalTitle);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start processing');
+      setIsProcessing(false);
+      setProgressMsg('');
+      processingRef.current = false;
+    }
   }
 
   async function processInBackground(
@@ -207,47 +248,58 @@ export default function SermonsPage() {
     sermonTitle: string,
   ) {
     try {
-      // Step 1: Compress audio
-      updateSermon(entryId, { progressMsg: 'Compressing audio...' });
-      const compressed = await compressAudio(file);
+      // Step 1: Decode audio and split into chunks
+      updateSermon(entryId, { progressMsg: 'Processing audio...' });
+      const arrayBuffer = await file.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-      // Step 2: Upload and transcribe via Groq
-      updateSermon(entryId, { progressMsg: 'Transcribing audio...' });
-      const formData = new FormData();
-      formData.append('audio', compressed, 'audio.wav');
+      const chunks = await audioBufferToWav16kMono(audioBuffer);
+      audioCtx.close();
 
-      const transRes = await fetch('/api/sermons/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
+      if (chunks.length === 0) throw new Error('Could not process audio file');
 
-      let transcript: string;
-      if (!transRes.ok) {
-        let errMsg = 'Transcription failed';
-        try {
-          const errData = await transRes.json();
-          errMsg = errData.error || errMsg;
-        } catch {
-          // Non-JSON response (e.g. Vercel 413 HTML error page)
-          const text = await transRes.text();
-          errMsg = `Server error (${transRes.status}): ${text.slice(0, 200)}`;
+      // Step 2: Transcribe each chunk sequentially
+      let fullTranscript = '';
+      for (let i = 0; i < chunks.length; i++) {
+        updateSermon(entryId, {
+          progressMsg: `Transcribing part ${i + 1} of ${chunks.length}...`,
+        });
+
+        const formData = new FormData();
+        formData.append('audio', chunks[i], `chunk-${i}.wav`);
+
+        const transRes = await fetch('/api/sermons/transcribe', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!transRes.ok) {
+          let errMsg = 'Transcription failed';
+          try {
+            const errData = await transRes.json();
+            errMsg = errData.error || errMsg;
+          } catch {
+            const text = await transRes.text();
+            errMsg = `Server error (${transRes.status}): ${text.slice(0, 200)}`;
+          }
+          throw new Error(`${errMsg} (part ${i + 1} of ${chunks.length})`);
         }
-        throw new Error(errMsg);
+
+        const transData = await transRes.json();
+        fullTranscript += (fullTranscript ? ' ' : '') + (transData.transcript || '');
       }
 
-      const transData = await transRes.json();
-      transcript = transData.transcript;
-
-      if (!transcript || transcript.trim().length < 10) {
+      if (!fullTranscript || fullTranscript.trim().length < 10) {
         throw new Error('Transcription too short or empty');
       }
 
-      // Step 3: Generate notes
+      // Step 3: Generate notes from full transcript
       updateSermon(entryId, { progressMsg: 'Generating notes...' });
       const notesRes = await fetch('/api/sermons/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, title: sermonTitle }),
+        body: JSON.stringify({ transcript: fullTranscript, title: sermonTitle }),
       });
 
       let notes: SermonNotes | undefined;
@@ -257,7 +309,7 @@ export default function SermonsPage() {
 
       // Step 4: Update entry with results
       updateSermon(entryId, {
-        transcript,
+        transcript: fullTranscript,
         notes,
         theme: notes?.theme || '',
         topic: notes?.topic || '',
