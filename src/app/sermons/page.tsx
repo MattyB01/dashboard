@@ -75,19 +75,7 @@ async function deleteSermonDb(id: string): Promise<void> {
   } catch {}
 }
 
-const VPS_URL = process.env.NEXT_PUBLIC_VPS_URL || 'https://salmon-selected-solely-record.trycloudflare.com';
 
-// Auto-discover VPS tunnel URL from config endpoint
-async function getVpsUrl(): Promise<string> {
-  try {
-    const res = await fetch('/api/sermons/config?key=vps_url');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.value) return data.value;
-    }
-  } catch {}
-  return VPS_URL; // fallback
-}
 
 // ─── Bible verse card colors ──────────────────────────────────────────────────
 
@@ -160,7 +148,7 @@ export default function SermonsPage() {
 
     setIsProcessing(true);
     setError('');
-    setProgressMsg('Uploading...');
+    setProgressMsg('Creating entry...');
 
     const entryId = crypto.randomUUID?.() || Date.now().toString(36);
 
@@ -181,35 +169,61 @@ export default function SermonsPage() {
       setSermons(prev => [entry, ...prev]);
       setProcessingIds(prev => new Set(prev).add(entryId));
 
-      // Upload raw file to VPS — it'll chunk & process server-side
-      const formData = new FormData();
-      formData.append('audio', audioFile);
-      formData.append('id', entryId);
-      formData.append('title', title.trim() || 'Untitled Sermon');
-      formData.append('date', date);
-      formData.append('ministry', ministry.trim());
-      formData.append('theme', theme || '');
-      formData.append('topic', topic || '');
+      // Step 1: Transcribe audio via API
+      setProgressMsg('Transcribing audio...');
+      const transcribeForm = new FormData();
+      transcribeForm.append('audio', audioFile);
 
-      const vpsUrl = await getVpsUrl();
-      const res = await fetch(`${vpsUrl}/process`, {
+      const transcribeRes = await fetch('/api/sermons/transcribe', {
         method: 'POST',
-        body: formData,
+        body: transcribeForm,
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Upload failed (${res.status})`);
+      if (!transcribeRes.ok) {
+        const errData = await transcribeRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Transcription failed (${transcribeRes.status})`);
+      }
+
+      const { transcript } = await transcribeRes.json();
+
+      // Step 2: Generate AI notes
+      setProgressMsg('Generating sermon notes...');
+      const notesRes = await fetch('/api/sermons/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript, title: title.trim() || 'Untitled Sermon' }),
+      });
+
+      if (notesRes.ok) {
+        const notes = await notesRes.json();
+        await updateSermonDb(entryId, {
+          transcript,
+          notes,
+          theme: notes.theme || theme || '',
+          topic: notes.topic || topic || '',
+          status: 'completed',
+        });
+        setSermons(prev => prev.map(s =>
+          s.id === entryId
+            ? { ...s, transcript, notes, theme: notes.theme || s.theme, topic: notes.topic || s.topic, status: 'completed' }
+            : s
+        ));
+      } else {
+        // Notes failed, but save what we have
+        await updateSermonDb(entryId, { transcript, status: 'completed' });
+        setSermons(prev => prev.map(s =>
+          s.id === entryId ? { ...s, transcript, status: 'completed' } : s
+        ));
       }
 
       resetForm();
       setView('library');
     } catch (err: any) {
-      setError(err.message || 'Upload failed');
-      // Mark entry as errored so it doesn't show spinning forever
+      setError(err.message || 'Processing failed');
       setSermons(prev => prev.map(s =>
         s.id === entryId ? { ...s, status: 'error', errorMessage: err.message } : s
       ));
+      await updateSermonDb(entryId, { status: 'error', errorMessage: err.message }).catch(() => {});
     } finally {
       setIsProcessing(false);
       setProgressMsg('');
@@ -452,7 +466,7 @@ export default function SermonsPage() {
 
                 {sermon.status === 'processing' && (
                   <p className="text-xs text-secondary leading-relaxed line-clamp-2 mb-3">
-                    Transcribing on server...
+                    Transcribing...
                   </p>
                 )}
 
@@ -507,7 +521,7 @@ export default function SermonsPage() {
         </button>
 
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-1">New Sermon</h1>
-        <p className="text-sm text-muted mb-8">Upload an audio recording — transcription and notes are generated on the server</p>
+        <p className="text-sm text-muted mb-8">Upload an audio recording to get transcription and AI-generated notes</p>
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-6">
@@ -523,8 +537,8 @@ export default function SermonsPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-fg mb-1">Uploading...</h3>
-            <p className="text-sm text-muted">Transferring audio to server — you'll be redirected to the library once uploaded</p>
+            <h3 className="text-base font-semibold text-fg mb-1">{progressMsg || 'Processing...'}</h3>
+            <p className="text-sm text-muted">Transferring to transcription service — you'll be redirected to the library once complete</p>
             <div className="mt-4 max-w-xs mx-auto bg-line rounded-full h-1.5 overflow-hidden">
               <div className="bg-accent h-full rounded-full animate-pulse" style={{ width: '60%' }} />
             </div>
@@ -566,7 +580,7 @@ export default function SermonsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                     <p className="text-sm text-muted">Tap to select an audio file</p>
-                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM — uploaded directly to server</p>
+                    <p className="text-xs text-muted mt-1">MP3, M4A, WAV, WebM</p>
                   </div>
                 )}
                 <input
@@ -632,7 +646,7 @@ export default function SermonsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Upload &amp; Process Server-side
+              Upload &amp; Process
             </button>
           </div>
         )}
@@ -716,8 +730,8 @@ export default function SermonsPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-fg mb-1">Processing on server...</h3>
-            <p className="text-sm text-muted">This page will update automatically when transcription is complete</p>
+            <h3 className="text-base font-semibold text-fg mb-1">Processing...</h3>
+            <p className="text-sm text-muted">This page will update automatically when complete</p>
           </div>
         ) : s.status === 'error' ? (
           <div className="bg-card border border-rose-200 rounded-2xl p-8 text-center">

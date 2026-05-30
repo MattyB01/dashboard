@@ -71,6 +71,7 @@ export async function PATCH(request: NextRequest) {
     if (fields.notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(JSON.stringify(fields.notes)); }
     if (fields.status !== undefined) { updates.push(`status = $${idx++}`); values.push(fields.status); }
     if (fields.errorMessage !== undefined) { updates.push(`error_message = $${idx++}`); values.push(fields.errorMessage); }
+    if (fields.audioUrl !== undefined) { updates.push(`audio_url = $${idx++}`); values.push(fields.audioUrl); }
 
     updates.push(`updated_at = NOW()`);
 
