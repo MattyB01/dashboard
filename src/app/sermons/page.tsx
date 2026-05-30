@@ -334,7 +334,15 @@ export default function SermonsPage() {
 
   function updateSermon(id: string, updates: Partial<SermonEntry> & { progressMsg?: string }) {
     setSermons(prev => {
-      const next = prev.map(s => s.id === id ? { ...s, ...updates } : s);
+      const next = prev.map(s => {
+        if (s.id !== id) return s;
+        const merged = { ...s, ...updates };
+        // Remove progressMsg when set to undefined
+        if (updates.progressMsg === undefined && 'progressMsg' in updates) {
+          delete (merged as any).progressMsg;
+        }
+        return merged;
+      });
       saveSermons(next);
       return next;
     });
