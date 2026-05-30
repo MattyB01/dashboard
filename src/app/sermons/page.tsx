@@ -223,7 +223,8 @@ export default function SermonsPage() {
   function retrySermon(id: string) {
     const sermon = sermons.find(s => s.id === id);
     if (!sermon || sermon.status !== 'error') return;
-    updateSermon(id, { status: 'processing', errorMessage: undefined });
+    setSermons(prev => prev.map(s => s.id === id ? { ...s, status: 'processing', errorMessage: undefined } : s));
+    updateSermonDb(id, { status: 'processing', errorMessage: '' });
     setProcessingIds(prev => new Set(prev).add(id));
     // Re-run with just the transcript data — user needs to re-upload
     // For now, reset to upload form with pre-filled fields
