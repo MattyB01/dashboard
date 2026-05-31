@@ -140,6 +140,39 @@ export default function SermonsPage() {
 
   if (!mounted) return null;
 
+  // ── Audio compression helpers ───────────────────────────────────────────
+
+  function writeStr(view: DataView, offset: number, str: string) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  function extractChunk(pcm: Float32Array, sampleRate: number, startSample: number, endSample: number): Blob {
+    const chunk = pcm.slice(startSample, endSample);
+    const dataBytes = chunk.length * 2;
+    const buf = new ArrayBuffer(44 + dataBytes);
+    const v = new DataView(buf);
+    writeStr(v, 0, 'RIFF');
+    v.setUint32(4, 36 + dataBytes, true);
+    writeStr(v, 8, 'WAVE');
+    writeStr(v, 12, 'fmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true);
+    v.setUint32(24, sampleRate, true);
+    v.setUint32(28, sampleRate * 2, true);
+    v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true);
+    writeStr(v, 36, 'data');
+    v.setUint32(40, dataBytes, true);
+    let off = 44;
+    for (let i = 0; i < chunk.length; i++) {
+      const s = Math.max(-1, Math.min(1, chunk[i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+
   // ── Audio compression & upload ───────────────────────────────────────────
 
   async function handleUpload() {
@@ -169,22 +202,70 @@ export default function SermonsPage() {
       setSermons(prev => [entry, ...prev]);
       setProcessingIds(prev => new Set(prev).add(entryId));
 
-      // Step 1: Transcribe audio via API
-      setProgressMsg('Transcribing audio...');
-      const transcribeForm = new FormData();
-      transcribeForm.append('audio', audioFile);
+      // Step 1: Compress audio (16kHz mono WAV) & transcribe
+      setProgressMsg('Compressing audio...');
 
-      const transcribeRes = await fetch('/api/sermons/transcribe', {
-        method: 'POST',
-        body: transcribeForm,
-      });
-
-      if (!transcribeRes.ok) {
-        const errData = await transcribeRes.json().catch(() => ({}));
-        throw new Error(errData.error || `Transcription failed (${transcribeRes.status})`);
+      // Decode, downsample to 16kHz mono PCM
+      const arrayBuffer = await audioFile.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const sr = audioBuffer.sampleRate;
+      const len = audioBuffer.length;
+      // Mix to mono
+      const mono = new Float32Array(len);
+      if (audioBuffer.numberOfChannels === 1) {
+        mono.set(audioBuffer.getChannelData(0));
+      } else {
+        const ch1 = audioBuffer.getChannelData(0);
+        const ch2 = audioBuffer.getChannelData(1);
+        for (let i = 0; i < len; i++) mono[i] = (ch1[i] + ch2[i]) / 2;
       }
+      // Downsample
+      const targetSr = 16000;
+      const newLen = Math.floor(len * targetSr / sr);
+      const pcm = new Float32Array(newLen);
+      const ratio = len / newLen;
+      for (let i = 0; i < newLen; i++) {
+        const src = i * ratio;
+        const lo = Math.floor(src);
+        const hi = Math.min(lo + 1, len - 1);
+        const f = src - lo;
+        pcm[i] = mono[lo] * (1 - f) + mono[hi] * f;
+      }
+      audioCtx.close();
 
-      const { transcript } = await transcribeRes.json();
+      // Vercel's body limit is ~4.5MB. At 16kHz mono 16-bit WAV:
+      // 32KB/sec → 4.5MB / 32KB = ~140 sec max per chunk. Use 120 sec for safety.
+      const CHUNK_SEC = 120;
+      const CHUNK_SAMPLES = targetSr * CHUNK_SEC;
+      const totalChunks = Math.ceil(newLen / CHUNK_SAMPLES);
+
+      let transcript = '';
+
+      for (let c = 0; c < totalChunks; c++) {
+        setProgressMsg(`Transcribing part ${c + 1}/${totalChunks}...`);
+        const startSmpl = c * CHUNK_SAMPLES;
+        const endSmpl = Math.min(startSmpl + CHUNK_SAMPLES, newLen);
+        const chunkBlob = extractChunk(pcm, targetSr, startSmpl, endSmpl);
+
+        const form = new FormData();
+        form.append('audio', chunkBlob, `chunk-${c}.wav`);
+
+        const res = await fetch('/api/sermons/transcribe', {
+          method: 'POST',
+          body: form,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Transcription failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        if (data.transcript) {
+          transcript += (transcript ? ' ' : '') + data.transcript;
+        }
+      }
 
       // Step 2: Generate AI notes
       setProgressMsg('Generating sermon notes...');
